@@ -37,7 +37,6 @@ static void CGEventKeyDisplayName(CGEventRef event, char *out, size_t cap) {
         ev = temp;
     }
 
-    // Ask CoreGraphics for the Unicode string this key would generate.
     UniChar buf[8] = {0};
     UniCharCount outLen = 0;
     CGEventKeyboardGetUnicodeString(ev, 8, &outLen, buf);
@@ -45,15 +44,12 @@ static void CGEventKeyDisplayName(CGEventRef event, char *out, size_t cap) {
     if (temp) CFRelease(temp);
 
     if (outLen > 0) {
-        // Convert UTF-16 UniChar[] to UTF-8.
         CFStringRef s = CFStringCreateWithCharactersNoCopy(kCFAllocatorDefault, buf, outLen, kCFAllocatorNull);
         if (s) {
             if (CFStringGetCString(s, out, (CFIndex)cap, kCFStringEncodingUTF8)) {
-                // If it's a single ASCII letter, upper-case for a keycap look.
                 if (out[1] == '\0' && out[0] >= 'a' && out[0] <= 'z') {
                     out[0] = (char)(out[0]-'a'+'A');
                 }
-                // Show a visible name for space
                 if (out[0] == ' ' && out[1] == '\0') {
                     snprintf(out, cap, "Space");
                 }
@@ -64,14 +60,12 @@ static void CGEventKeyDisplayName(CGEventRef event, char *out, size_t cap) {
         }
     }
 
-    // Non-printing fallback: use the hardware keycode for a stable name.
-    // (These codes come from kCGKeyboardEventKeycode.)
     uint16_t kc = (uint16_t)CGEventGetIntegerValueField(event, kCGKeyboardEventKeycode);
     switch (kc) {
         case 36:  snprintf(out, cap, "Return");  return;
         case 48:  snprintf(out, cap, "Tab");     return;
         case 49:  snprintf(out, cap, "Space");   return;
-        case 51:  snprintf(out, cap, "Delete");  return; // Backspace
+        case 51:  snprintf(out, cap, "Delete");  return;
         case 53:  snprintf(out, cap, "Escape");  return;
 
         case 123: snprintf(out, cap, "Left");    return;
@@ -93,7 +87,6 @@ static void CGEventKeyDisplayName(CGEventRef event, char *out, size_t cap) {
         case 111: snprintf(out, cap, "F12");     return;
     }
 
-    // Last resort
     snprintf(out, cap, "Keycode:%u", (unsigned)kc);
 }
 
@@ -106,22 +99,21 @@ static CGEventRef tapCallback(CGEventTapProxy proxy, CGEventType type, CGEventRe
     if (type != kCGEventKeyDown) return event;
 
     int64_t isRepeat = CGEventGetIntegerValueField(event, kCGKeyboardEventAutorepeat);
-    if (isRepeat) return event;
+    if (isRepeat) return NULL; // swallow repeats too (optional, but keeps capture clean)
 
     char name[32];
     CGEventKeyDisplayName(event, name, sizeof(name));
     uint16_t kc = (uint16_t)CGEventGetIntegerValueField(event, kCGKeyboardEventKeycode);
 
-    // Store into mailbox (overwrites any previous unread event).
     pthread_mutex_lock(&gMu);
     gKeycode = kc;
     strncpy(gName, name, sizeof(gName)-1);
     gName[sizeof(gName)-1] = '\0';
     gHasMsg = true;
-    pthread_cond_signal(&gCv); // wake one waiter
+    pthread_cond_signal(&gCv);
     pthread_mutex_unlock(&gMu);
 
-    return event;
+    return NULL; // swallow: prevents system sound/flash + prevents key delivery
 }
 
 static void* tapThread(void* _) {
@@ -131,7 +123,7 @@ static void* tapThread(void* _) {
 
     CGEventMask mask = (CGEventMaskBit(kCGEventKeyDown));
     gEventTap = CGEventTapCreate(kCGSessionEventTap, kCGHeadInsertEventTap,
-                                 kCGEventTapOptionListenOnly, mask, tapCallback, NULL);
+                                 kCGEventTapOptionDefault, mask, tapCallback, NULL);
     if (!gEventTap) {
         pthread_mutex_lock(&gMu);
         gRunning = false;
@@ -139,6 +131,7 @@ static void* tapThread(void* _) {
         pthread_mutex_unlock(&gMu);
         return NULL;
     }
+
     gRunLoopSrc = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, gEventTap, 0);
     gRunLoop = CFRunLoopGetCurrent();
     CFRunLoopAddSource(gRunLoop, gRunLoopSrc, kCFRunLoopCommonModes);
@@ -169,7 +162,6 @@ void hk_stop(void) {
     if (gThread) { pthread_join(gThread, NULL); gThread = 0; }
 }
 
-// Blocks until we either (a) have a mailbox message, or (b) the tap stops.
 int hk_wait_next(uint16_t* out_keycode, char* out_name, size_t out_cap) {
     pthread_mutex_lock(&gMu);
     for (;;) {
@@ -181,13 +173,13 @@ int hk_wait_next(uint16_t* out_keycode, char* out_name, size_t out_cap) {
                 memcpy(out_name, gName, n);
                 out_name[n] = '\0';
             }
-            gHasMsg = false; // consume
+            gHasMsg = false;
             pthread_mutex_unlock(&gMu);
             return 1;
         }
         if (!gRunning) {
             pthread_mutex_unlock(&gMu);
-            return 0; // tap closed
+            return 0;
         }
         pthread_cond_wait(&gCv, &gMu);
     }
