@@ -63,6 +63,16 @@ func DTOSplitFileToDomain(payload dto.SplitFile) (session.SplitFile, error) {
 		}
 	}
 
+	// Self-healing to remove invalid runs cause by bug present in early versions of OS
+	fixedRuns := []dto.Run{}
+	for _, run := range payload.Runs {
+		if run.ID == uuid.Nil.String() {
+			continue
+		}
+
+		fixedRuns = append(fixedRuns, run)
+	}
+
 	newSplitFile.ID = id
 	newSplitFile.Version = payload.Version
 	newSplitFile.Attempts = payload.Attempts
@@ -74,7 +84,7 @@ func DTOSplitFileToDomain(payload dto.SplitFile) (session.SplitFile, error) {
 	newSplitFile.WindowHeight = payload.WindowHeight
 	newSplitFile.WindowX = payload.WindowX
 	newSplitFile.WindowY = payload.WindowY
-	newSplitFile.Runs = dtoRunsToDomain(payload.Runs)
+	newSplitFile.Runs = dtoRunsToDomain(fixedRuns)
 	newSplitFile.PB = PB
 	newSplitFile.Offset = time.Duration(payload.Offset) * time.Millisecond
 	newSplitFile.AutosplitterFile = payload.AutosplitterFile
@@ -187,13 +197,13 @@ func domainRunToDTO(run session.Run, splitFileID uuid.UUID, splitFileVersion int
 
 func dtoRunsToDomain(runs []dto.Run) []session.Run {
 	out := make([]session.Run, len(runs))
-	for _, r := range runs {
+	for i, r := range runs {
 		r, err := dtoRunToDomain(r)
 		if err != nil {
 			logger.Errorf(logModule, "failed to get run from DTO splitfile: %s\n", err.Error())
 			continue
 		}
-		out = append(out, r)
+		out[i] = r
 	}
 	return out
 }
