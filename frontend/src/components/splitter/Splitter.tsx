@@ -13,9 +13,10 @@ import Timer from "./Timer";
 export enum CompareAgainst {
     Best = "best",
     Average = "average",
+    SumOfBest = "sumOfBest",
 }
 
-export type Comparison = CompareAgainst.Best | CompareAgainst.Average;
+export type Comparison = CompareAgainst.Best | CompareAgainst.Average | CompareAgainst.SumOfBest;
 
 type SplitterParams = {
     sessionPayload: SessionPayload;
@@ -32,7 +33,7 @@ export default function Splitter({ sessionPayload, configPayload }: SplitterPara
         (async () => {
             setContextMenuItems(await buildContextMenu());
         })();
-    }, [globalHotkeys]);
+    }, [globalHotkeys, comparison]);
 
     useEffect(() => {
         (async () => {
@@ -77,16 +78,23 @@ export default function Splitter({ sessionPayload, configPayload }: SplitterPara
         contextMenuItems.push({ type: "separator" });
 
         contextMenuItems.push({
-            label: "Compare Against Average",
+            label: (comparison == CompareAgainst.Average ? "✓ " : "") + "Compare Against Average",
             onClick: () => {
                 setComparison(CompareAgainst.Average);
             },
         });
 
         contextMenuItems.push({
-            label: "Compare Against Best",
+            label: (comparison == CompareAgainst.Best ? "✓ " : "") + "Compare Against Best Run",
             onClick: () => {
                 setComparison(CompareAgainst.Best);
+            },
+        });
+
+        contextMenuItems.push({
+            label: (comparison == CompareAgainst.SumOfBest ? "✓ " : "") + "Compare Against Sum of Best Segments",
+            onClick: () => {
+                setComparison(CompareAgainst.SumOfBest);
             },
         });
 
