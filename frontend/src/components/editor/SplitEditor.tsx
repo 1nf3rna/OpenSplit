@@ -16,7 +16,6 @@ import { Command } from "../../App";
 import { useClickOutside } from "../../hooks/useClickOutside";
 import SegmentPayload from "../../models/segmentPayload";
 import SplitFilePayload from "../../models/splitFilePayload";
-import { FilePicker } from "../FilePicker";
 import { msToParts, partsToMS, TimeParts } from "../splitter/Timer";
 import TimeRow from "./TimeRow";
 

@@ -49,17 +49,15 @@ type DispatchReceiver interface {
 }
 
 type Service struct {
-	mu                    sync.Mutex
-	receiver              DispatchReceiver
-	runtime               RuntimeProvider
-	autoSplitterDirectory string
+	mu       sync.Mutex
+	receiver DispatchReceiver
+	runtime  RuntimeProvider
 }
 
-func NewService(receiver DispatchReceiver, runtime RuntimeProvider, autoSplitterFileDirectory string) *Service {
+func NewService(receiver DispatchReceiver, runtime RuntimeProvider) *Service {
 	return &Service{
-		autoSplitterDirectory: autoSplitterFileDirectory,
-		runtime:               runtime,
-		receiver:              receiver,
+		runtime:  runtime,
+		receiver: receiver,
 	}
 }
 
@@ -68,17 +66,4 @@ func (s *Service) Dispatch(command Command, payload *string) (DispatchReply, err
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.receiver.ReceiveDispatch(command, payload)
-}
-
-func (s *Service) PickAutoSplitterFile() (string, error) {
-	return s.runtime.OpenFileDialog(runtime.OpenDialogOptions{
-		DefaultDirectory: s.autoSplitterDirectory,
-		Title:            "Select an Autosplitter lua file",
-		Filters: []runtime.FileFilter{
-			{
-				DisplayName: "Autosplitter Files",
-				Pattern:     "*.lua",
-			},
-		},
-	})
 }
