@@ -176,6 +176,8 @@ export default function SegmentList({ sessionPayload, comparison }: SplitListPar
                     case CompareAgainst.Best:
                         results.individual[segment.id] = segment.pb;
                         break;
+                    case CompareAgainst.SumOfBest:
+                        results.individual[segment.id] = segment.gold;
                 }
                 results.cumulative[segment.id] = results.individual[segment.id] + cumulative;
                 cumulative += results.individual[segment.id];
