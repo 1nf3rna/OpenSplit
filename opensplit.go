@@ -49,7 +49,7 @@ func main() {
 	runtimeProvider := platform.NewWailsRuntime()
 	fileProvider := platform.NewFileRuntime()
 
-	_, logDir, _, _, autoSplittersDir := setupPaths(fileProvider)
+	_, logDir, _, _ := setupPaths(fileProvider)
 	setupLogging(logDir)
 	logger.Info(logModule, "logging initialized, starting opensplit")
 
@@ -68,7 +68,7 @@ func main() {
 	configUIBridge := bridge.NewConfig(configUpdateChannel, runtimeProvider)
 
 	// Build dispatcher that can receive commands from frontend or backend and dispatch them to the state machine
-	commandDispatcher := dispatcher.NewService(machine, runtimeProvider, autoSplittersDir)
+	commandDispatcher := dispatcher.NewService(machine, runtimeProvider)
 	remoteControl := autosplitter.NewSocket(commandDispatcher, 6767)
 	go remoteControl.Listen()
 
@@ -166,7 +166,7 @@ func setupLogging(logDir string) {
 //	return http.StripPrefix("/skins/", http.FileServer(http.Dir(skinDir)))
 //}
 
-func setupPaths(fileProvider repo.FileProvider) (string, string, string, string, string) {
+func setupPaths(fileProvider repo.FileProvider) (string, string, string, string) {
 	base, err := fileProvider.UserHomeDir()
 	if err != nil {
 		panic(err)
@@ -175,7 +175,6 @@ func setupPaths(fileProvider repo.FileProvider) (string, string, string, string,
 	appDir := filepath.Join(base, "OpenSplit")
 	logDir := filepath.Join(appDir, "logs")
 	skinDir := filepath.Join(appDir, "Skins")
-	autosplittersDir := filepath.Join(appDir, "Autosplitters")
 	splitFileDir := filepath.Join(appDir, "Split Files")
 	err = os.MkdirAll(appDir, 0755)
 	if err != nil {
@@ -197,11 +196,7 @@ func setupPaths(fileProvider repo.FileProvider) (string, string, string, string,
 		panic(err)
 	}
 
-	err = os.MkdirAll(autosplittersDir, 0755)
-	if err != nil {
-		panic(err)
-	}
-	return appDir, logDir, skinDir, splitFileDir, autosplittersDir
+	return appDir, logDir, skinDir, splitFileDir
 }
 
 func startInterruptListener(ctx context.Context, hotkeyProvider statemachine.HotkeyProvider) {

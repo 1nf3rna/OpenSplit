@@ -16,7 +16,6 @@ export default class SplitFilePayload {
     sob: number = 0;
     pb: RunPayload | null = null;
     offset: number = 0;
-    autosplitter_file: string = "";
 
     constructor(init?: Partial<SplitFilePayload>) {
         if (init) {

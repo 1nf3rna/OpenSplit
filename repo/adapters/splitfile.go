@@ -21,21 +21,20 @@ func DomainSplitFileToDTO(sf session.SplitFile) dto.SplitFile {
 	}
 
 	return dto.SplitFile{
-		ID:               sf.ID.String(),
-		GameName:         sf.GameName,
-		GameCategory:     sf.GameCategory,
-		Version:          sf.Version,
-		Segments:         domainSegmentsToDTO(sf.Segments),
-		Runs:             domainRunsToDTO(sf.Runs, sf.ID, sf.Version),
-		PB:               PB,
-		SOB:              sf.SOB.Milliseconds(),
-		WindowX:          sf.WindowX,
-		WindowY:          sf.WindowY,
-		WindowWidth:      sf.WindowWidth,
-		WindowHeight:     sf.WindowHeight,
-		Attempts:         sf.Attempts,
-		Offset:           sf.Offset.Milliseconds(),
-		AutosplitterFile: sf.AutosplitterFile,
+		ID:           sf.ID.String(),
+		GameName:     sf.GameName,
+		GameCategory: sf.GameCategory,
+		Version:      sf.Version,
+		Segments:     domainSegmentsToDTO(sf.Segments),
+		Runs:         domainRunsToDTO(sf.Runs, sf.ID, sf.Version),
+		PB:           PB,
+		SOB:          sf.SOB.Milliseconds(),
+		WindowX:      sf.WindowX,
+		WindowY:      sf.WindowY,
+		WindowWidth:  sf.WindowWidth,
+		WindowHeight: sf.WindowHeight,
+		Attempts:     sf.Attempts,
+		Offset:       sf.Offset.Milliseconds(),
 	}
 }
 
@@ -87,7 +86,6 @@ func DTOSplitFileToDomain(payload dto.SplitFile) (session.SplitFile, error) {
 	newSplitFile.Runs = dtoRunsToDomain(fixedRuns)
 	newSplitFile.PB = PB
 	newSplitFile.Offset = time.Duration(payload.Offset) * time.Millisecond
-	newSplitFile.AutosplitterFile = payload.AutosplitterFile
 	return newSplitFile, nil
 }
 
