@@ -15,6 +15,8 @@ type SplitListParameters = {
 type FlatSegment = {
     Segment: SegmentPayload;
     Depth: number;
+    ParentId: string | null;
+    HasChildren: boolean;
 };
 
 type Targets = {
@@ -22,15 +24,21 @@ type Targets = {
     individual: Record<string, number>;
 };
 
-function flattenSegments(segments: SegmentPayload[], depth: number = 0): FlatSegment[] {
-    const flatSegments: FlatSegment[] = [];
+function flattenSegments(segments: SegmentPayload[], depth: number = 0, parentId: string | null = null): FlatSegment[] {
+    const flat: FlatSegment[] = [];
     for (const segment of segments) {
-        flatSegments.push({ Segment: segment, Depth: depth });
+        flat.push({
+            Segment: segment,
+            Depth: depth,
+            ParentId: parentId,
+            HasChildren: segment.children.length > 0,
+        });
+
         if (segment.children.length > 0) {
-            flatSegments.push(...flattenSegments(segment.children, depth + 1));
+            flat.push(...flattenSegments(segment.children, depth + 1, segment.id));
         }
     }
-    return flatSegments;
+    return flat;
 }
 
 // Delta time display for splits and active row
@@ -98,6 +106,7 @@ function segmentRow(
     activeRow: boolean = false,
     time: number | null = null,
     activeRowRef?: React.RefObject<HTMLTableRowElement | null>,
+    renderToggle?: JSX.Element | null,
 ) {
     let delta: number | null = null;
 
@@ -114,6 +123,7 @@ function segmentRow(
             key={segmentData.Segment.id}
         >
             <td className="splitName" style={{ paddingLeft: segmentData.Depth * 16 }}>
+                {renderToggle}
                 {segmentData.Segment.name}
             </td>
 
@@ -145,23 +155,41 @@ function ActiveRow({ segmentData, cTarget, iTarget, activeRowRef }: ActiveRowPro
     return segmentRow(segmentData, null, cTarget, iTarget, true, time, activeRowRef);
 }
 
+function isElementFullyVisible(element: HTMLElement, container: HTMLElement): boolean {
+    const elRect = element.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+
+    return elRect.top >= containerRect.top && elRect.bottom <= containerRect.bottom;
+}
+
+function getAncestorIds(leafId: string, parentById: Map<string, string | null>): string[] {
+    const ancestors: string[] = [];
+    let cur: string | null | undefined = leafId;
+
+    while (cur != null) {
+        const p = parentById.get(cur);
+        if (p == null) break;
+        ancestors.push(p);
+        cur = p;
+    }
+
+    return ancestors;
+}
+
+function isVisible(id: string, parentById: Map<string, string | null>, expandedParents: Set<string>): boolean {
+    let cur: string | null | undefined = id;
+    while (cur != null) {
+        const p = parentById.get(cur);
+        if (p == null) return true; // reached root
+        if (!expandedParents.has(p)) return false;
+        cur = p;
+    }
+    return true;
+}
+
 export default function SegmentList({ sessionPayload, comparison }: SplitListParameters) {
     const activeRowRef = useRef<HTMLTableRowElement | null>(null);
     const containerRef = useRef<HTMLDivElement | null>(null);
-
-    useEffect(() => {
-        const row = activeRowRef.current;
-        const container = containerRef.current;
-
-        if (!row || !container) return;
-
-        if (!isElementFullyVisible(row, container)) {
-            row.scrollIntoView({
-                behavior: "smooth",
-                block: "start",
-            });
-        }
-    }, [sessionPayload.current_segment_index]);
 
     const targets = useMemo<Targets>(() => {
         let cumulative = 0;
@@ -206,6 +234,56 @@ export default function SegmentList({ sessionPayload, comparison }: SplitListPar
         return leaves[leaves.length - 1].id;
     }, [sessionPayload.leaf_segments]);
 
+    const parentById = useMemo(() => {
+        const m = new Map<string, string | null>();
+        for (const fs of flatSegments) {
+            m.set(fs.Segment.id, fs.ParentId);
+        }
+        return m;
+    }, [flatSegments]);
+    const [expandedParents, setExpandedParents] = useState<Set<string>>(() => new Set());
+
+    useEffect(() => {
+        const leaves = sessionPayload.leaf_segments;
+        if (!leaves || leaves.length === 0) {
+            setExpandedParents(new Set());
+            return;
+        }
+
+        const activeLeaf = leaves[sessionPayload.current_segment_index];
+        if (!activeLeaf) {
+            setExpandedParents(new Set());
+            return;
+        }
+
+        const ancestors = getAncestorIds(activeLeaf.id, parentById);
+        setExpandedParents(new Set(ancestors));
+    }, [sessionPayload.current_segment_index, sessionPayload.leaf_segments, parentById]);
+
+    // Keep active row in view
+    useEffect(() => {
+        const row = activeRowRef.current;
+        const container = containerRef.current;
+
+        if (!row || !container) return;
+
+        if (!isElementFullyVisible(row, container)) {
+            row.scrollIntoView({
+                behavior: "smooth",
+                block: "start",
+            });
+        }
+    }, [sessionPayload.current_segment_index]);
+
+    const toggleParent = (parentId: string) => {
+        setExpandedParents((prev) => {
+            const next = new Set(prev);
+            if (next.has(parentId)) next.delete(parentId);
+            else next.add(parentId);
+            return next;
+        });
+    };
+
     const { mainRows, finalRow } = useMemo(() => {
         const main: JSX.Element[] = [];
         let final: JSX.Element | null = null;
@@ -215,13 +293,47 @@ export default function SegmentList({ sessionPayload, comparison }: SplitListPar
         }
 
         for (const segmentData of flatSegments) {
+            const isFinalLeaf = finalLeafId != null && segmentData.Segment.id === finalLeafId;
+
+            // Hide collapsed rows, BUT always allow the final leaf through
+            if (!isFinalLeaf && !isVisible(segmentData.Segment.id, parentById, expandedParents)) {
+                continue;
+            }
+
             const leafIndex = leafIndexById.get(segmentData.Segment.id);
 
             // Parent (non-leaf) segment
             if (leafIndex === undefined) {
+                const isExpanded = expandedParents.has(segmentData.Segment.id);
+                const hasChildren = segmentData.HasChildren;
+
+                const toggle = hasChildren ? (
+                    <button
+                        type="button"
+                        className="collapseToggle"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            toggleParent(segmentData.Segment.id);
+                        }}
+                        aria-label={isExpanded ? "Collapse segment group" : "Expand segment group"}
+                        style={{
+                            marginRight: 6,
+                            width: 12,
+                            minHeight: 8,
+                            padding: 3,
+                            border: 0,
+                            lineHeight: "8px",
+                            textAlign: "center",
+                        }}
+                    >
+                        {isExpanded ? "▾" : "▸"}
+                    </button>
+                ) : null;
+
                 main.push(
                     <tr key={segmentData.Segment.id} className="parentRow">
                         <td className="splitName" style={{ paddingLeft: segmentData.Depth * 16 }}>
+                            {toggle}
                             <strong>{segmentData.Segment.name}</strong>
                         </td>
                         <td className="splitDelta" />
@@ -250,7 +362,7 @@ export default function SegmentList({ sessionPayload, comparison }: SplitListPar
                 segmentRow(segmentData, split, cTarget, iTarget)
             );
 
-            // Separate final leaf row
+            // Separate final leaf row (still respects collapse via isVisible above)
             if (finalLeafId && segmentData.Segment.id === finalLeafId) {
                 final = rowEl;
             } else {
@@ -268,6 +380,8 @@ export default function SegmentList({ sessionPayload, comparison }: SplitListPar
         leafIndexById,
         targets,
         finalLeafId,
+        parentById,
+        expandedParents,
     ]);
 
     return (
@@ -296,11 +410,4 @@ export default function SegmentList({ sessionPayload, comparison }: SplitListPar
             </div>
         </div>
     );
-}
-
-function isElementFullyVisible(element: HTMLElement, container: HTMLElement): boolean {
-    const elRect = element.getBoundingClientRect();
-    const containerRect = container.getBoundingClientRect();
-
-    return elRect.top >= containerRect.top && elRect.bottom <= containerRect.bottom;
 }
