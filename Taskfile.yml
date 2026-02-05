@@ -1,23 +1,23 @@
-version: '3'
+version: "3"
 
 vars:
     FRONTEND_DIR: frontend
-    FRONTEND_DIST: '{{.FRONTEND_DIR}}/dist'
-    VERSION: '{{.GIT_TAG}}'
+    FRONTEND_DIST: "{{.FRONTEND_DIR}}/dist"
+    VERSION: "{{.GIT_TAG}}"
 
 tasks:
     default:
-        cmds: [ task: dev ]
+        cmds:
+            - task dev
 
     clean:
         desc: Cleans env for local development/CI
         cmds:
             - |
                 {{if eq OS "windows"}}
-                powershell -NoProfile -Command "Remove-Item -ErrorAction SilentlyContinue -Recurse -Force -LiteralPath 'build/bin','frontend/package-lock.json','frontend/node_modules'; exit 0"
+                powershell -NoProfile -Command "Remove-Item -ErrorAction SilentlyContinue -Recurse -Force -LiteralPath 'build/bin','frontend/node_modules'; exit 0"
                 {{else}}
                 rm -rf build/bin
-                rm -rf frontend/package-lock.json
                 rm -rf frontend/node_modules
                 {{end}}
 
@@ -33,65 +33,22 @@ tasks:
                 : > "{{.FRONTEND_DIST}}/.gitkeep"
                 {{end}}
 
-    deps:
-        desc: Install frontend deps (clean, reproducible)
-        cmds:
-            - cd frontend
-            - npm ci
+
 
     dev:
-        desc: Start Wails dev server (installs deps on first run)
-        deps: [ ensure-dist ]
+        desc: Start Wails dev server
         cmds:
-            # Step 1: install frontend dependencies
             - |
-                cd frontend
                 {{if eq OS "windows"}}
-                powershell -NoProfile -Command "if (Test-Path 'package-lock.json') { npm ci } else { npm install }"
+                task wails-dev-win
                 {{else}}
-                bash -lc 'if [ -f package-lock.json ]; then npm ci; else npm install; fi'
+                task wails-run ACTION=dev
                 {{end}}
 
-            # Step 2: run Wails with environment & tags depending on OS / Linux session
-            - |
-                {{- if eq OS "windows" -}}
-                wails dev
-                {{- else if eq OS "darwin" -}}
-                CGO_ENABLED=1 wails dev
-                {{- else if eq OS "linux" -}}
-                bash -lc '
-                  # detect session type
-                  SESS_TYPE=${XDG_SESSION_TYPE:-}
-                  TAGS=""
-
-                  if [ "$SESS_TYPE" = "x11" ]; then
-                    TAGS="x11"
-                  fi
-
-                  # detect WebKit GTK version
-                  if pkg-config --exists webkit2gtk-4.1; then
-                    TAGS="$TAGS,webkit2_41"
-                  elif pkg-config --exists webkit2gtk-4.0; then
-                    TAGS="$TAGS,webkit2_40"
-                  fi
-
-                  # remove leading comma
-                  TAGS=${TAGS#,}
-
-                  if [ -n "$TAGS" ]; then
-                    echo "Using build tags: $TAGS"
-                    CGO_ENABLED=1 wails dev -tags="$TAGS"
-                  else
-                    CGO_ENABLED=1 wails dev
-                  fi
-                '
-                {{- else -}}
-                echo "Unsupported OS: {{OS}}"
-                {{- end }}
-
     build:
-        desc: Production build (clean bin)
-        deps: [ ensure-dist, deps ]
+        desc: Production build
+        deps:
+            - ensure-dist
         cmds:
             - |
                 {{if eq OS "windows"}}
@@ -99,18 +56,24 @@ tasks:
                 {{else}}
                 rm -rf build/bin
                 {{end}}
-            - wails build -clean
+            - |
+                {{if eq OS "windows"}}
+                task wails-build-win
+                {{else}}
+                task wails-run ACTION=build
+                {{end}}
 
     test:
         desc: Run Go tests
-        deps: [ ensure-dist ]
+        deps:
+            - ensure-dist
         cmds:
             - go test ./... -count=1 -coverprofile=cover.out
 
     lint:
         desc: Go vet + golangci-lint + optional frontend lint
         cmds:
-            - { cmd: go vet ./..., ignore_error: true }
+            - go vet ./...
             - |
                 {{if eq OS "windows"}}
                 powershell -NoProfile -Command "if (Get-Command golangci-lint -ErrorAction SilentlyContinue) { golangci-lint run } else { Write-Host 'skipping: golangci-lint not installed' }"
@@ -142,22 +105,80 @@ tasks:
                 bash -lc 'if [ -f "package.json" ] && npm -s run | grep -q "^  fmt"; then npm run -s fmt; else npx -y prettier@latest --log-level warn --write "**/*.{ts,tsx,js,jsx,css,scss,html,json,md}"; fi'
                 {{end}}
 
-    release:
-        desc: Zip current platform build into dist/release
-        deps: [ build ]
+    # ------------------------------------------------------------
+    # Shared Wails runner for linux/darwin (computes tags + CGO once)
+    # Call with: task wails-run ACTION=dev
+    #            task wails-run ACTION=build
+    # ------------------------------------------------------------
+    wails-run:
+        desc: Run Wails with computed tags (linux/darwin)
+        deps:
+            - ensure-dist
+        platforms: [linux, darwin]
         vars:
-            OUT_DIR: dist/release
-            OSNAME:
+            ACTION: '{{.ACTION | default "dev"}}'
+            CGO_ENABLED:
                 sh: |
-                    {{if eq OS "windows"}}echo windows{{else}}uname -s | tr '[:upper:]' '[:lower:]'{{end}}
-            ARCHNAME:
+                    echo 1
+            WAILS_TAGS:
                 sh: |
-                    {{if eq OS "windows"}}wmic os get osarchitecture | findstr /C:64 >nul && echo amd64 || echo 386{{else}}uname -m{{end}}
+                    set -euo pipefail
+                    # Only Linux uses x11/webkit tags in your scheme
+                    if [ "{{OS}}" != "linux" ]; then
+                      echo ""
+                      exit 0
+                    fi
+
+                    tags=""
+
+                    # X11 tag only when actually under X11
+                    if [ "${XDG_SESSION_TYPE:-}" = "x11" ]; then
+                      tags="x11"
+                    fi
+
+                    # WebKitGTK tag based on installed pkg-config module
+                    if command -v pkg-config >/dev/null 2>&1; then
+                      if pkg-config --exists webkit2gtk-4.1; then
+                        if [ -n "$tags" ]; then tags="$tags,webkit2_41"; else tags="webkit2_41"; fi
+                      elif pkg-config --exists webkit2gtk-4.0; then
+                        if [ -n "$tags" ]; then tags="$tags,webkit2_40"; else tags="webkit2_40"; fi
+                      fi
+                    fi
+
+                    echo "$tags"
+            WAILS_TAG_ARGS:
+                sh: |
+                    set -euo pipefail
+                    tags='{{.WAILS_TAGS}}'
+                    if [ -n "$tags" ]; then
+                      echo "-tags=$tags"
+                    else
+                      echo ""
+                    fi
         cmds:
             - |
-                {{if eq OS "windows"}}
-                powershell -NoProfile -Command "New-Item -ItemType Directory -Force -Path '{{.OUT_DIR}}' | Out-Null; Compress-Archive -Path 'build/bin/*' -DestinationPath '{{.OUT_DIR}}/opensplit-{{.OSNAME}}-{{.ARCHNAME}}-{{.VERSION | default \"dev\"}}.zip' -Force"
-                {{else}}
-                mkdir -p "{{.OUT_DIR}}"
-                (cd build/bin && zip -r "../../{{.OUT_DIR}}/opensplit-{{.OSNAME}}-{{.ARCHNAME}}-{{.VERSION | default \"dev\"}}.zip" .)
-                {{end}}
+                set -euo pipefail
+                echo "ACTION={{.ACTION}}"
+                echo "CGO_ENABLED={{.CGO_ENABLED}}"
+                echo "WAILS_TAGS={{.WAILS_TAGS}}"
+                if [ "{{.ACTION}}" = "dev" ]; then
+                  CGO_ENABLED={{.CGO_ENABLED}} wails dev {{.WAILS_TAG_ARGS}}
+                else
+                  CGO_ENABLED={{.CGO_ENABLED}} wails build -clean {{.WAILS_TAG_ARGS}}
+                fi
+
+    wails-dev-win:
+        desc: Run wails dev (windows)
+        deps:
+            - ensure-dist
+        platforms: [windows]
+        cmds:
+            - wails dev
+
+    wails-build-win:
+        desc: Run wails build (windows)
+        deps:
+            - ensure-dist
+        platforms: [windows]
+        cmds:
+            - wails build -clean
