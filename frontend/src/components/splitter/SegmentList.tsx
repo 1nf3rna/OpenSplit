@@ -24,11 +24,7 @@ type Targets = {
     individual: Record<string, number>;
 };
 
-function flattenSegments(
-    segments: SegmentPayload[],
-    depth: number = 0,
-    parentId: string | null = null,
-): FlatSegment[] {
+function flattenSegments(segments: SegmentPayload[], depth: number = 0, parentId: string | null = null): FlatSegment[] {
     const flat: FlatSegment[] = [];
     for (const segment of segments) {
         flat.push({
@@ -311,29 +307,28 @@ export default function SegmentList({ sessionPayload, comparison }: SplitListPar
                 const isExpanded = expandedParents.has(segmentData.Segment.id);
                 const hasChildren = segmentData.HasChildren;
 
-                const toggle =
-                    hasChildren ? (
-                        <button
-                            type="button"
-                            className="collapseToggle"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                toggleParent(segmentData.Segment.id);
-                            }}
-                            aria-label={isExpanded ? "Collapse segment group" : "Expand segment group"}
-                            style={{
-                                marginRight: 6,
-                                width: 12,
-                                minHeight: 8,
-                                padding: 3,
-                                border: 0,
-                                lineHeight: "8px",
-                                textAlign: "center",
-                            }}
-                        >
-                            {isExpanded ? "▾" : "▸"}
-                        </button>
-                    ) : null;
+                const toggle = hasChildren ? (
+                    <button
+                        type="button"
+                        className="collapseToggle"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            toggleParent(segmentData.Segment.id);
+                        }}
+                        aria-label={isExpanded ? "Collapse segment group" : "Expand segment group"}
+                        style={{
+                            marginRight: 6,
+                            width: 12,
+                            minHeight: 8,
+                            padding: 3,
+                            border: 0,
+                            lineHeight: "8px",
+                            textAlign: "center",
+                        }}
+                    >
+                        {isExpanded ? "▾" : "▸"}
+                    </button>
+                ) : null;
 
                 main.push(
                     <tr key={segmentData.Segment.id} className="parentRow">
