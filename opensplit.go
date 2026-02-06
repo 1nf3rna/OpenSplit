@@ -49,7 +49,7 @@ func main() {
 	runtimeProvider := platform.NewWailsRuntime()
 	fileProvider := platform.NewFileRuntime()
 
-	_, logDir, _, _ := setupPaths(fileProvider)
+	_, logDir, skinDir, splitFileDir := setupPaths(fileProvider)
 	setupLogging(logDir)
 	logger.Info(logModule, "logging initialized, starting opensplit")
 
@@ -57,7 +57,7 @@ func main() {
 
 	timerService, timerUpdateChannel := timer.NewStopwatch(timer.NewTicker(time.Millisecond * 20))
 	repoService := repo.NewService(jsonRepo)
-	configService, configUpdateChannel := config.NewService()
+	configService, configUpdateChannel := config.NewService(splitFileDir, skinDir)
 
 	sessionService, sessionUpdateChannel := session.NewService(timerService)
 	machine := statemachine.InitMachine(runtimeProvider, repoService, sessionService, configService)
@@ -68,7 +68,8 @@ func main() {
 	configUIBridge := bridge.NewConfig(configUpdateChannel, runtimeProvider)
 
 	// Build dispatcher that can receive commands from frontend or backend and dispatch them to the state machine
-	commandDispatcher := dispatcher.NewService(machine, runtimeProvider)
+	folderProvider := platform.NewFolderProvider(configService)
+	commandDispatcher := dispatcher.NewService(machine, runtimeProvider, folderProvider)
 	remoteControl := autosplitter.NewSocket(commandDispatcher, 6767)
 	go remoteControl.Listen()
 
@@ -167,7 +168,7 @@ func setupLogging(logDir string) {
 //}
 
 func setupPaths(fileProvider repo.FileProvider) (string, string, string, string) {
-	base, err := fileProvider.UserHomeDir()
+	base, err := fileProvider.UserConfigDir()
 	if err != nil {
 		panic(err)
 	}

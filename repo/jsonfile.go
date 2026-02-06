@@ -35,7 +35,7 @@ type FileProvider interface {
 	WriteFile(string, []byte, os.FileMode) error
 	ReadFile(string) ([]byte, error)
 	MkdirAll(string, os.FileMode) error
-	UserHomeDir() (string, error)
+	UserConfigDir() (string, error)
 }
 
 // JsonFile represents a SplitFile as a JSON file
@@ -171,7 +171,7 @@ func (j *JsonFile) LoadSplitFile() ([]byte, error) {
 }
 
 func (j *JsonFile) SaveConfig(configServicePayload []byte) error {
-	defaultDirectoryBase, err := j.fileProvider.UserHomeDir()
+	defaultDirectoryBase, err := j.fileProvider.UserConfigDir()
 	if err != nil {
 		logger.Errorf(logModule, "failed to get user home directory: %s", err.Error())
 		return err
@@ -193,7 +193,7 @@ func (j *JsonFile) SaveConfig(configServicePayload []byte) error {
 }
 
 func (j *JsonFile) LoadConfig() ([]byte, error) {
-	defaultDirectoryBase, err := j.fileProvider.UserHomeDir()
+	defaultDirectoryBase, err := j.fileProvider.UserConfigDir()
 	if err != nil {
 		logger.Errorf(logModule, "failed to get user home directory: %s", err.Error())
 		return nil, err
@@ -222,7 +222,7 @@ func (j *JsonFile) getDefaultDirectory() (string, error) {
 	if j.lastUsedDirectory != "" {
 		defaultDirectory = j.lastUsedDirectory
 	} else {
-		defaultDirectoryBase, err := j.fileProvider.UserHomeDir()
+		defaultDirectoryBase, err := j.fileProvider.UserConfigDir()
 		if err != nil {
 			logger.Errorf(logModule, "failed to get user home directory: %s", err.Error())
 			return "", err

@@ -17,12 +17,16 @@ type Service struct {
 	SpeedRunAPIBase      string                                 `json:"speed_run_API_base"`
 	KeyConfig            map[dispatcher.Command]keyinfo.KeyData `json:"key_config"`
 	GlobalHotkeysActive  bool                                   `json:"global_hotkeys_active"`
+	SplitFileDir         string                                 `json:"splitfile_dir"`
+	SkinsDir             string                                 `json:"skins_dir"`
 	configUpdatedChannel chan<- *Service
 }
 
-func NewService() (*Service, chan *Service) {
+func NewService(splitFileFir string, skinsDir string) (*Service, chan *Service) {
 	updateChannel := make(chan *Service)
 	return &Service{
+		SplitFileDir:         splitFileFir,
+		SkinsDir:             skinsDir,
 		SpeedRunAPIBase:      "",
 		KeyConfig:            map[dispatcher.Command]keyinfo.KeyData{},
 		configUpdatedChannel: updateChannel,

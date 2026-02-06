@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
-import { Dispatch } from "../../wailsjs/go/dispatcher/Service";
-import { EventsOn, WindowSetSize } from "../../wailsjs/runtime";
+import {Dispatch, OpenSkinsFolder, OpenSplitFileFolder} from "../../wailsjs/go/dispatcher/Service";
+import {BrowserOpenURL, EventsOn, WindowSetSize} from "../../wailsjs/runtime";
 import { Command } from "../App";
 import { ConfigPayload, KeyInfo } from "../models/configPayload";
 
@@ -69,9 +69,14 @@ export default function Config({ configPayload }: ConfigParams) {
     return (
         <div className="container form-container">
             <h2>OpenSplit Configuration</h2>
-            <div className="options">
+            <div id="options">
                 <h3>Hotkeys</h3>
                 {displayHotkeyRows()}
+            </div>
+            <div id="directories">
+                <h3>Directories</h3>
+                <button onClick={OpenSplitFileFolder}>Open Splitfile Folder</button>
+                <button onClick={OpenSkinsFolder}>Open Skins Folder</button>
             </div>
             <div className="actions">
                 <button onClick={() => Dispatch(Command.SUBMIT, JSON.stringify(config))}>Save</button>

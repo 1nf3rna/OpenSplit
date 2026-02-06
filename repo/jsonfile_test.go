@@ -28,7 +28,7 @@ func (f *MockFileProvider) MkdirAll(path string, perm os.FileMode) error {
 	return nil
 }
 
-func (f *MockFileProvider) UserHomeDir() (string, error) {
+func (f *MockFileProvider) AppHomeDirectory() (string, error) {
 	return "/home/user/zelly", nil
 }
 

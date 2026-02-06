@@ -20,6 +20,6 @@ func (f *FileRuntime) MkdirAll(path string, perm os.FileMode) error {
 	return os.MkdirAll(path, perm)
 }
 
-func (f *FileRuntime) UserHomeDir() (string, error) {
-	return os.UserHomeDir()
+func (f *FileRuntime) UserConfigDir() (string, error) {
+	return os.UserConfigDir()
 }

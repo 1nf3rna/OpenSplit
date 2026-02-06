@@ -3,3 +3,7 @@
 import {dispatcher} from '../models';
 
 export function Dispatch(arg1:dispatcher.Command,arg2:any):Promise<dispatcher.DispatchReply>;
+
+export function OpenSkinsFolder():Promise<void>;
+
+export function OpenSplitFileFolder():Promise<void>;
