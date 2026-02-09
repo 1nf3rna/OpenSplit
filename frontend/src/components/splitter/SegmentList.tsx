@@ -81,17 +81,17 @@ const getSegmentDisplayTime = (
             if (split.current_duration < targetIndividual) className = "timer-ahead";
         }
 
-        return <strong className={className}>{displayTime}</strong>;
+        return <strong className={"target " + className}>{displayTime}</strong>;
     }
 
     // Default target display
     if (targetCumulative == null) {
-        return <strong>-</strong>;
+        return <strong className="target">-</strong>;
     }
 
     const t = displayFormattedTimeParts(formatDuration(msToParts(targetCumulative)));
     return (
-        <strong>
+        <strong className="target">
             {t[0]}
             <small>{t[1]}</small>
         </strong>
@@ -119,10 +119,10 @@ function segmentRow(
     return (
         <tr
             ref={activeRow ? (activeRowRef ?? null) : null}
-            className={activeRow ? "selected" : ""}
+            className={"segmentRow" + (activeRow ? " selected" : "")}
             key={segmentData.Segment.id}
         >
-            <td className="splitName" style={{ paddingLeft: segmentData.Depth * 16 }}>
+            <td className="splitName" style={{ paddingLeft: 5 + segmentData.Depth * 16 }}>
                 {renderToggle}
                 {segmentData.Segment.name}
             </td>
@@ -316,15 +316,6 @@ export default function SegmentList({ sessionPayload, comparison }: SplitListPar
                             toggleParent(segmentData.Segment.id);
                         }}
                         aria-label={isExpanded ? "Collapse segment group" : "Expand segment group"}
-                        style={{
-                            marginRight: 6,
-                            width: 12,
-                            minHeight: 8,
-                            padding: 3,
-                            border: 0,
-                            lineHeight: "8px",
-                            textAlign: "center",
-                        }}
                     >
                         {isExpanded ? "▾" : "▸"}
                     </button>
@@ -385,24 +376,24 @@ export default function SegmentList({ sessionPayload, comparison }: SplitListPar
     ]);
 
     return (
-        <div className="splitList">
-            <div className="gameInfo">
-                <h1 className="gameTitle">
+        <div id="splitList">
+            <div id="gameInfo">
+                <h1 id="gameTitle">
                     <strong>{sessionPayload.loaded_split_file?.game_name}</strong>
                 </h1>
-                <h2 className="gameCategory">
+                <h2 id="gameCategory">
                     <small>{sessionPayload.loaded_split_file?.game_category}</small>
                 </h2>
             </div>
 
-            <div className="splitBody">
-                <div ref={containerRef} className="splitContainer">
+            <div id="splitBody">
+                <div ref={containerRef} id="splitContainer">
                     <table cellSpacing="0">
                         <tbody>{mainRows}</tbody>
                     </table>
                 </div>
 
-                <div className="finalSegment">
+                <div id="finalSegment">
                     <table>
                         <tbody>{finalRow}</tbody>
                     </table>

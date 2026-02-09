@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 
 import { Dispatch } from "../wailsjs/go/dispatcher/Service";
+import { GetSkinAddress } from "../wailsjs/go/skin/Service";
 import { EventsEmit, EventsOn, WindowGetPosition, WindowGetSize } from "../wailsjs/runtime";
 import Config from "./components/Config";
 import SplitEditor from "./components/editor/SplitEditor";
@@ -70,11 +71,34 @@ export default function App() {
     useAppEventBindings(setViewModel);
     useWindowFocus();
 
+    useEffect(() => {
+        // get the initial skin
+        GetSkinAddress().then((a) => changeSkin(a));
+
+        // subscribe to future updates
+        return EventsOn("skin:update", (address: string) => {
+            changeSkin(address);
+        });
+    }, []);
+
     return (
         <div id="App" className="app">
             <ViewRouter model={viewModel} />
         </div>
     );
+}
+
+function changeSkin(address: string) {
+    let link = document.getElementById("skin-css") as HTMLLinkElement | null;
+
+    if (!link) {
+        link = document.createElement("link");
+        link.id = "skin-css";
+        link.rel = "stylesheet";
+        document.head.appendChild(link);
+    }
+    link.href = address;
+    console.log("changed skin to ", link.href);
 }
 
 function useDetectWindowChange() {

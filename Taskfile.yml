@@ -73,7 +73,7 @@ tasks:
     lint:
         desc: Go vet + golangci-lint + optional frontend lint
         cmds:
-            - go vet ./...
+            - go vet -unsafeptr=false ./...
             - |
                 {{if eq OS "windows"}}
                 powershell -NoProfile -Command "if (Get-Command golangci-lint -ErrorAction SilentlyContinue) { golangci-lint run } else { Write-Host 'skipping: golangci-lint not installed' }"

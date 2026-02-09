@@ -4,6 +4,7 @@ import (
 	"compress/gzip"
 	"context"
 	"embed"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -27,6 +28,7 @@ import (
 	"github.com/zellydev-games/opensplit/platform"
 	"github.com/zellydev-games/opensplit/repo"
 	"github.com/zellydev-games/opensplit/session"
+	"github.com/zellydev-games/opensplit/skin"
 	"github.com/zellydev-games/opensplit/statemachine"
 	"github.com/zellydev-games/opensplit/timer"
 
@@ -49,7 +51,7 @@ func main() {
 	runtimeProvider := platform.NewWailsRuntime()
 	fileProvider := platform.NewFileRuntime()
 
-	_, logDir, _, _ := setupPaths(fileProvider)
+	_, logDir, skinDir, splitFileDir := setupPaths(fileProvider)
 	setupLogging(logDir)
 	logger.Info(logModule, "logging initialized, starting opensplit")
 
@@ -57,20 +59,24 @@ func main() {
 
 	timerService, timerUpdateChannel := timer.NewStopwatch(timer.NewTicker(time.Millisecond * 20))
 	repoService := repo.NewService(jsonRepo)
-	configService, configUpdateChannel := config.NewService()
+	configService, configUpdateChannel := config.NewService(splitFileDir, skinDir)
 
 	sessionService, sessionUpdateChannel := session.NewService(timerService)
-	machine := statemachine.InitMachine(runtimeProvider, repoService, sessionService, configService)
+	machine := statemachine.NewMachine(runtimeProvider, repoService, sessionService, configService)
+
+	// Build out skin server
+	watcher := platform.NewDirChangeTracker()
+	skinService, skinUpdatedCh := skin.NewService(skinDir, configService, repoService, watcher)
 
 	// Build UI bridges with model update channels
 	timerUIBridge := bridge.NewTimer(timerUpdateChannel, runtimeProvider)
 	sessionUIBridge := bridge.NewSession(sessionUpdateChannel, runtimeProvider)
 	configUIBridge := bridge.NewConfig(configUpdateChannel, runtimeProvider)
+	skinBridge := bridge.NewSkin(skinUpdatedCh, runtimeProvider)
 
 	// Build dispatcher that can receive commands from frontend or backend and dispatch them to the state machine
-	commandDispatcher := dispatcher.NewService(machine, runtimeProvider)
-	remoteControl := autosplitter.NewSocket(commandDispatcher, 6767)
-	go remoteControl.Listen()
+	folderProvider := platform.NewFolderProvider(configService)
+	commandDispatcher := dispatcher.NewService(machine, runtimeProvider, folderProvider)
 
 	var hotkeyProvider statemachine.HotkeyProvider
 
@@ -91,8 +97,26 @@ func main() {
 		},
 		BackgroundColour: &options.RGBA{R: 27, G: 38, B: 54, A: 1},
 		OnStartup: func(ctx context.Context) {
+			err := repoService.LoadConfig(configService)
+			if err != nil {
+				if errors.Is(err, repo.ErrConfigMissing) {
+					configService.CreateDefaultConfig()
+					err = repoService.SaveConfig(configService)
+					if err != nil {
+						logger.Errorf(logModule, "failed to create default config: %s", err.Error())
+						os.Exit(1)
+					}
+				} else {
+					logger.Errorf(logModule, "failed to load config: %s", err.Error())
+					os.Exit(2)
+				}
+			}
+
+			// setup hotkey hook
 			hotkeyProvider = hotkeys.SetupHotkeys()
 			machine.AttachHotkeyProvider(hotkeyProvider)
+
+			// startup services
 			timerService.Startup(ctx)
 			runtimeProvider.Startup(ctx)
 			machine.Startup(ctx)
@@ -101,6 +125,25 @@ func main() {
 			sessionUIBridge.StartUIPump()
 			timerUIBridge.StartUIPump()
 			configUIBridge.StartUIPump()
+			skinBridge.StartUIPump()
+
+			// Start remote control
+			remoteControl := autosplitter.NewSocket(commandDispatcher, 6767)
+			go remoteControl.Listen()
+
+			err = skinService.Startup()
+			if err != nil {
+				logger.Errorf(logModule, "error startup skin server: %v", err)
+				return
+			}
+
+			_, err = skinService.InitListener()
+			if err != nil {
+				logger.Errorf(logModule, "error initializing skin server: %v", err)
+				return
+			}
+
+			go skinService.Serve()
 
 			startInterruptListener(ctx, hotkeyProvider)
 			runtime.WindowSetAlwaysOnTop(ctx, true)
@@ -113,6 +156,7 @@ func main() {
 		},
 		Bind: []interface{}{
 			commandDispatcher,
+			skinService,
 		},
 	})
 
@@ -167,7 +211,7 @@ func setupLogging(logDir string) {
 //}
 
 func setupPaths(fileProvider repo.FileProvider) (string, string, string, string) {
-	base, err := fileProvider.UserHomeDir()
+	base, err := fileProvider.UserConfigDir()
 	if err != nil {
 		panic(err)
 	}

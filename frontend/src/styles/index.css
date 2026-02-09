@@ -1,11 +1,8 @@
-@layer reset, tokens, components, skins, overrides;
+@layer reset, components, vars, skins, overrides;
 @import "./reset.css";
 @import "./common.css";
-@import "./tokens.css";
-@import "./timer.css";
 @import "./context-menu.css";
-@import "./app.css";
 @import "./forms.css";
+@import "./app.css";
 @import "./autocomplete.css";
-@import "./splitter.css";
 @import "./config.css";

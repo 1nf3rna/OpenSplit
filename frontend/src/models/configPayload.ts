@@ -11,4 +11,5 @@ export type ConfigPayload = {
     speed_run_API_base: string;
     key_config: Record<Command, KeyInfo>;
     global_hotkeys_active: boolean;
+    selected_skin: string;
 };

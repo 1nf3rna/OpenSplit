@@ -14,6 +14,11 @@ type RuntimeProvider interface {
 	OpenFileDialog(runtime.OpenDialogOptions) (string, error)
 }
 
+type FolderProvider interface {
+	OpenSplitFileDir()
+	OpenSkinsDir()
+}
+
 // Command bytes are sent to the Service.Dispatch method receiver to indicate the state machine should take some action.
 type Command byte
 
@@ -49,15 +54,20 @@ type DispatchReceiver interface {
 }
 
 type Service struct {
-	mu       sync.Mutex
-	receiver DispatchReceiver
-	runtime  RuntimeProvider
+	mu             sync.Mutex
+	receiver       DispatchReceiver
+	runtime        RuntimeProvider
+	folderProvider FolderProvider
 }
 
-func NewService(receiver DispatchReceiver, runtime RuntimeProvider) *Service {
+func NewService(receiver DispatchReceiver,
+	runtime RuntimeProvider,
+	folderProvider FolderProvider,
+) *Service {
 	return &Service{
-		runtime:  runtime,
-		receiver: receiver,
+		runtime:        runtime,
+		receiver:       receiver,
+		folderProvider: folderProvider,
 	}
 }
 
@@ -66,4 +76,12 @@ func (s *Service) Dispatch(command Command, payload *string) (DispatchReply, err
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.receiver.ReceiveDispatch(command, payload)
+}
+
+func (s *Service) OpenSplitFileFolder() {
+	s.folderProvider.OpenSplitFileDir()
+}
+
+func (s *Service) OpenSkinsFolder() {
+	s.folderProvider.OpenSkinsDir()
 }

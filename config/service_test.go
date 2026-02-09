@@ -11,7 +11,7 @@ import (
 )
 
 func TestNewService(t *testing.T) {
-	s, c := NewService()
+	s, c := NewService("", "")
 	if s.configUpdatedChannel != c {
 		t.Fatal("configUpdatedChannel was not set properly on NewService")
 	}
