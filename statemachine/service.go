@@ -75,8 +75,8 @@ type Service struct {
 	windowHasFocus                        bool
 }
 
-// InitMachine sets the global singleton, and gives it a friendly default state
-func InitMachine(runtimeProvider RuntimeProvider, repoService *repo.Service, sessionService *session.Service, configService *config.Service) *Service {
+// NewMachine sets the global singleton, and gives it a friendly default state
+func NewMachine(runtimeProvider RuntimeProvider, repoService *repo.Service, sessionService *session.Service, configService *config.Service) *Service {
 	machine = &Service{
 		sessionService:  sessionService,
 		runtimeProvider: runtimeProvider,

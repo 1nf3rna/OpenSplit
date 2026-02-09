@@ -2,6 +2,8 @@ package platform
 
 import "os"
 
+const logModule = "platform"
+
 type FileRuntime struct{}
 
 func NewFileRuntime() *FileRuntime {

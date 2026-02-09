@@ -48,7 +48,7 @@
 
     input,
     textarea {
-        --wails-draggable: nodrag;
+        --wails-draggable: no-drag;
         padding: 15px;
         border: 1px solid #333;
         border-radius: 3px;

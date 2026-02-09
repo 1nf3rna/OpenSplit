@@ -9,6 +9,7 @@ import Welcome from "./components/splitter/Welcome";
 import { ConfigPayload } from "./models/configPayload";
 import SessionPayload from "./models/sessionPayload";
 import SplitFilePayload from "./models/splitFilePayload";
+import {GetSkinAddress} from "../wailsjs/go/skin/Service";
 
 export enum Command {
     QUIT,
@@ -70,11 +71,34 @@ export default function App() {
     useAppEventBindings(setViewModel);
     useWindowFocus();
 
+    useEffect(() => {
+        // get the initial skin
+        GetSkinAddress().then(a => changeSkin(a))
+
+        // subscribe to future updates
+        return EventsOn("skin:update", (address: string) => {
+            changeSkin(address);
+        })
+    }, []);
+
     return (
         <div id="App" className="app">
             <ViewRouter model={viewModel} />
         </div>
     );
+}
+
+function changeSkin(address: string) {
+    let link = document.getElementById("skin-css") as HTMLLinkElement | null;
+
+    if (!link) {
+        link = document.createElement("link");
+        link.id = "skin-css";
+        link.rel = "stylesheet";
+        document.head.appendChild(link);
+    }
+    link.href = address;
+    console.log("changed skin to ", link.href);
 }
 
 function useDetectWindowChange() {

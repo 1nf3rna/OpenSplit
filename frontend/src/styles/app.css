@@ -5,11 +5,10 @@
         align-items: center;
         padding: 20px 20px 5px;
         flex-grow: 1;
-        background: var(--color-primary);
+        background: linear-gradient(to bottom, #222, #4b0170);
     }
 
     .welcome img {
-        --wails-draggable: drag;
         height: 150px;
         width: 150px;
         user-select: none;
@@ -27,14 +26,6 @@
         flex-grow: 1;
         justify-content: flex-end;
         color: #888;
-    }
-
-    * {
-        -webkit-touch-callout: none;
-        -webkit-user-select: none;
-        -moz-user-select: none;
-        -ms-user-select: none;
-        user-select: none;
     }
 }
 

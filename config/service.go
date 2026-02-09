@@ -19,6 +19,7 @@ type Service struct {
 	GlobalHotkeysActive  bool                                   `json:"global_hotkeys_active"`
 	SplitFileDir         string                                 `json:"splitfile_dir"`
 	SkinsDir             string                                 `json:"skins_dir"`
+	SelectedSkin         string                                 `json:"selected_skin"`
 	configUpdatedChannel chan<- *Service
 }
 
