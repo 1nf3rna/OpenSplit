@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 
 import { Dispatch } from "../wailsjs/go/dispatcher/Service";
+import { GetSkinAddress } from "../wailsjs/go/skin/Service";
 import { EventsEmit, EventsOn, WindowGetPosition, WindowGetSize } from "../wailsjs/runtime";
 import Config from "./components/Config";
 import SplitEditor from "./components/editor/SplitEditor";
@@ -9,7 +10,6 @@ import Welcome from "./components/splitter/Welcome";
 import { ConfigPayload } from "./models/configPayload";
 import SessionPayload from "./models/sessionPayload";
 import SplitFilePayload from "./models/splitFilePayload";
-import {GetSkinAddress} from "../wailsjs/go/skin/Service";
 
 export enum Command {
     QUIT,
@@ -73,12 +73,12 @@ export default function App() {
 
     useEffect(() => {
         // get the initial skin
-        GetSkinAddress().then(a => changeSkin(a))
+        GetSkinAddress().then((a) => changeSkin(a));
 
         // subscribe to future updates
         return EventsOn("skin:update", (address: string) => {
             changeSkin(address);
-        })
+        });
     }, []);
 
     return (

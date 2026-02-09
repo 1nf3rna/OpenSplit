@@ -170,6 +170,7 @@ func (w *WindowsManager) handleKeyDown(nCode uintptr, identifier uintptr, kbHook
 
 	if isKeyEvent(identifier) {
 		// Process modifiers first
+		//goland:noinspection ALL
 		hookInfo := *(*kbDLLHook)(unsafe.Pointer(kbHookStruct)) //nolint:all
 		vk := hookInfo.vkCode
 

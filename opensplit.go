@@ -131,8 +131,13 @@ func main() {
 			remoteControl := autosplitter.NewSocket(commandDispatcher, 6767)
 			go remoteControl.Listen()
 
-			skinService.Startup()
-			err, _ = skinService.InitListener()
+			err = skinService.Startup()
+			if err != nil {
+				logger.Errorf(logModule, "error startup skin server: %v", err)
+				return
+			}
+
+			_, err = skinService.InitListener()
 			if err != nil {
 				logger.Errorf(logModule, "error initializing skin server: %v", err)
 				return

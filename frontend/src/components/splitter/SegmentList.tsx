@@ -122,7 +122,7 @@ function segmentRow(
             className={"segmentRow" + (activeRow ? " selected" : "")}
             key={segmentData.Segment.id}
         >
-            <td className="splitName" style={{ paddingLeft:  5 + segmentData.Depth * 16 }}>
+            <td className="splitName" style={{ paddingLeft: 5 + segmentData.Depth * 16 }}>
                 {renderToggle}
                 {segmentData.Segment.name}
             </td>

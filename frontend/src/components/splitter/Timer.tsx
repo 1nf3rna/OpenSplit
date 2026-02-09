@@ -51,11 +51,7 @@ export default function Timer({ offset }: TimerParams) {
                 <span id="time-sep-hm" aria-hidden="true">
                     {formattedTimeParts.sepHM}
                 </span>
-                <span
-                    id="time-minutes"
-                    data-unit="minutes"
-                    data-present={formattedTimeParts.showMinutes ? "1" : "0"}
-                >
+                <span id="time-minutes" data-unit="minutes" data-present={formattedTimeParts.showMinutes ? "1" : "0"}>
                     {formattedTimeParts.minutesText}
                 </span>
                 <span id="time-sep-ms" aria-hidden="true">

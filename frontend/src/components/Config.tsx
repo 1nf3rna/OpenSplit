@@ -1,10 +1,10 @@
-import {useEffect, useState} from "react";
+import { useEffect, useState } from "react";
 
-import {Dispatch, OpenSkinsFolder, OpenSplitFileFolder} from "../../wailsjs/go/dispatcher/Service";
-import { EventsOn, WindowSetSize} from "../../wailsjs/runtime";
+import { Dispatch, OpenSkinsFolder, OpenSplitFileFolder } from "../../wailsjs/go/dispatcher/Service";
+import { GetAvailableSkins, SetSkin } from "../../wailsjs/go/skin/Service";
+import { EventsOn, WindowSetSize } from "../../wailsjs/runtime";
 import { Command } from "../App";
 import { ConfigPayload, KeyInfo } from "../models/configPayload";
-import {GetAvailableSkins, GetSkinAddress, SetSkin} from "../../wailsjs/go/skin/Service";
 
 export type ConfigParams = {
     configPayload: ConfigPayload;
@@ -19,16 +19,16 @@ export default function Config({ configPayload }: ConfigParams) {
     const [selectedSkin, setSelectedSkin] = useState<string>(configPayload.selected_skin);
 
     useEffect(() => {
-        (async() =>{
-            await SetSkin(selectedSkin, true)
-        })()
+        (async () => {
+            await SetSkin(selectedSkin, true);
+        })();
     }, [selectedSkin]);
 
     useEffect(() => {
         (async () => {
             const as = await GetAvailableSkins();
             setAvailableSkins(as);
-        })()
+        })();
     }, []);
 
     useEffect(() => {
@@ -91,8 +91,7 @@ export default function Config({ configPayload }: ConfigParams) {
 
             <hr />
 
-            <div id="skins"
-            style={{marginBottom: 20}}>
+            <div id="skins" style={{ marginBottom: 20 }}>
                 <h3>Active Skin</h3>
                 <select
                     style={{ marginLeft: 20, width: "50%" }}
@@ -100,15 +99,11 @@ export default function Config({ configPayload }: ConfigParams) {
                     value={selectedSkin}
                     onChange={(e) => setSelectedSkin(e.target.value)}
                 >
-                    {
-                        availableSkins.map((s) =>
-                            <option
-                                value={s}
-                                key={s}
-                            >
-                                {s}
-                            </option>)
-                    }
+                    {availableSkins.map((s) => (
+                        <option value={s} key={s}>
+                            {s}
+                        </option>
+                    ))}
                 </select>
             </div>
 

@@ -8,7 +8,7 @@ import (
 	"github.com/zellydev-games/opensplit/logger"
 )
 
-func (s *Service) InitListener() (error, int) {
+func (s *Service) InitListener() (int, error) {
 	s.initOnce.Do(func() {
 		fs := http.FileServer(http.Dir(s.skinDir))
 		mux := http.NewServeMux()
@@ -35,7 +35,7 @@ func (s *Service) InitListener() (error, int) {
 		logger.Infof(logModule, "skin server setup on %s", s.address)
 	})
 
-	return s.initErr, s.port
+	return s.port, s.initErr
 }
 
 func (s *Service) Serve() {

@@ -7,7 +7,7 @@ export function GetAvailableSkins():Promise<Array<string>>;
 
 export function GetSkinAddress():Promise<string>;
 
-export function InitListener():Promise<Error|number>;
+export function InitListener():Promise<number>;
 
 export function SelectedSkin():Promise<string>;
 
