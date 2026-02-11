@@ -3,12 +3,15 @@ name: Nightly
 on:
     push:
         branches: [ main ]
+        tags:
+            - "*"
 
 permissions:
     contents: write
 
 concurrency:
-    group: nightly
+    # Keep nightly builds serialized, but don't make tag releases cancel each other.
+    group: ${{ github.ref_type == 'tag' && format('release-{0}', github.ref_name) || 'nightly' }}
     cancel-in-progress: true
 
 jobs:
@@ -96,7 +99,7 @@ jobs:
                   # Create a suffix from tags (e.g., -x11-webkit2_41) if tags are non-empty
                   TAGSUFFIX=""
                   if [ -n "${{ matrix.tags }}" ]; then
-                    TAGSUFFIX="-${{ matrix.tags }}"    # keep commas if you like; or replace with dashes:
+                    TAGSUFFIX="-${{ matrix.tags }}"
                     TAGSUFFIX="${TAGSUFFIX//,/-}"
                   fi
                   ARCHIVE="opensplit-${{ matrix.goos }}-${{ matrix.goarch }}${TAGSUFFIX}.zip"
@@ -116,80 +119,130 @@ jobs:
             - name: Upload artifact (per platform)
               uses: actions/upload-artifact@v6
               with:
-                  name: nightly-zips-${{ matrix.name }}
+                  name: zips-${{ matrix.name }}
                   path: ${{ env.ARCHIVE }}
 
     publish:
-        name: Publish Nightly Release
+        name: Publish Release
         needs: build
         runs-on: ubuntu-latest
 
         steps:
+            - name: Decide release name (nightly vs tag)
+              shell: bash
+              run: |
+                  set -euo pipefail
+                  if [ "${{ github.ref_type }}" = "tag" ]; then
+                    echo "RELEASE_NAME=${{ github.ref_name }}" >> "$GITHUB_ENV"
+                    echo "IS_TAG=true" >> "$GITHUB_ENV"
+                  else
+                    echo "RELEASE_NAME=nightly" >> "$GITHUB_ENV"
+                    echo "IS_TAG=false" >> "$GITHUB_ENV"
+                  fi
+
             - name: Download all artifacts
               uses: actions/download-artifact@v7
               with:
-                  pattern: nightly-zips-*
+                  pattern: zips-*
                   merge-multiple: true
                   path: dist
 
-            - name: Ensure 'nightly' release exists
+            - name: Ensure release exists
               env:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              shell: bash
               run: |
-                  gh release view nightly --repo "${{ github.repository }}" >/dev/null 2>&1 || \
-                    gh release create nightly --repo "${{ github.repository }}" --title "Nightly" --prerelease --notes "Rolling nightly build" --latest=false
-
-            - name: Write Nightly release notes
-              run: |
-                  cat > notes.md << 'EOF'
-                  ## Which Linux build should I download?
-
-                  Pick the archive that matches your WebKitGTK **runtime**:
-
-                  - Distros with WebKitGTK 4.1: use the `*-x11-webkit2_41*` build
-                  - Distros with WebKitGTK 4.0: use the `*-x11-webkit2_40*` build
-
-                  Note: these only work with X11 at the moment, Wayland support coming soon.
-
-                  You can check your system with one of these one-liners:
-
-                  **Debian/Ubuntu:**
-                  ```bash
-                  if dpkg -s libwebkit2gtk-4.1-0 >/dev/null 2>&1; then
-                    echo "Use: *-x11-webkit2_41*"
-                  elif dpkg -s libwebkit2gtk-4.0-37 >/dev/null 2>&1; then
-                    echo "Use: *-x11-webkit2_40*"
-                  else
-                    echo "No WebKitGTK 4.0/4.1 runtime found. On Ubuntu 24.04+: sudo apt install libwebkit2gtk-4.1-0"
-                    echo "On Ubuntu 22.04: sudo apt install libwebkit2gtk-4.0-37"
+                  set -euo pipefail
+                  if gh release view "${RELEASE_NAME}" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+                    echo "Release ${RELEASE_NAME} already exists."
+                    exit 0
                   fi
-                  ```
 
-                  **Generic (no dev packages required):**
-                  ```bash
-                  if ldconfig -p 2>/dev/null | grep -q 'libwebkit2gtk-4\.1\.so'; then
-                    echo "Use: *-x11-webkit2_41*"
-                  elif ldconfig -p 2>/dev/null | grep -q 'libwebkit2gtk-4\.0\.so'; then
-                    echo "Use: *-x11-webkit2_40*"
+                  if [ "${IS_TAG}" = "true" ]; then
+                    # Create a normal release for the tag
+                    gh release create "${RELEASE_NAME}" \
+                      --repo "${{ github.repository }}" \
+                      --title "${RELEASE_NAME}" \
+                      --notes "Release ${RELEASE_NAME}"
                   else
-                    echo "Could not detect WebKitGTK 4.0/4.1 runtime on this system."
+                    # Create/maintain rolling nightly prerelease (not latest)
+                    gh release create "${RELEASE_NAME}" \
+                      --repo "${{ github.repository }}" \
+                      --title "Nightly" \
+                      --prerelease \
+                      --notes "Rolling nightly build" \
+                      --latest=false
                   fi
-                  ```
 
-                  > Note: Linux builds require running under **Xorg** (we ship `-tags x11`). Wayland global hotkeys aren’t supported.
-                  EOF
+            -   name: Write release notes
+                shell: bash
+                run: |
+                    set -euo pipefail
 
-            - name: Update Nightly release notes
+                    # Always include Linux build selection notes.
+                    # For tags, prepend a small header; for nightly, keep it as-is.
+                    if [ "${IS_TAG}" = "true" ]; then
+                      cat > notes.md << EOF
+                    ## ${RELEASE_NAME}
+
+                    Automated release for tag \`${RELEASE_NAME}\`.
+
+                    EOF
+                    else
+                      : > notes.md
+                    fi
+
+                    cat >> notes.md << 'EOF'
+                    ## Which Linux build should I download?
+
+                    Pick the archive that matches your WebKitGTK **runtime**:
+
+                    - Distros with WebKitGTK 4.1: use the `*-x11-webkit2_41*` build
+                    - Distros with WebKitGTK 4.0: use the `*-x11-webkit2_40*` build
+
+                    Note: these only work with X11 at the moment, Wayland support coming soon.
+
+                    You can check your system with one of these one-liners:
+
+                    **Debian/Ubuntu:**
+                    ```bash
+                    if dpkg -s libwebkit2gtk-4.1-0 >/dev/null 2>&1; then
+                      echo "Use: *-x11-webkit2_41*"
+                    elif dpkg -s libwebkit2gtk-4.0-37 >/dev/null 2>&1; then
+                      echo "Use: *-x11-webkit2_40*"
+                    else
+                      echo "No WebKitGTK 4.0/4.1 runtime found. On Ubuntu 24.04+: sudo apt install libwebkit2gtk-4.1-0"
+                      echo "On Ubuntu 22.04: sudo apt install libwebkit2gtk-4.0-37"
+                    fi
+                    ```
+
+                    **Generic (no dev packages required):**
+                    ```bash
+                    if ldconfig -p 2>/dev/null | grep -q 'libwebkit2gtk-4\.1\.so'; then
+                      echo "Use: *-x11-webkit2_41*"
+                    elif ldconfig -p 2>/dev/null | grep -q 'libwebkit2gtk-4\.0\.so'; then
+                      echo "Use: *-x11-webkit2_40*"
+                    else
+                      echo "Could not detect WebKitGTK 4.0/4.1 runtime on this system."
+                    fi
+                    ```
+
+                    > Note: Linux builds require running under **Xorg** (we ship `-tags x11`). Wayland global hotkeys aren’t supported.
+                    EOF
+
+            - name: Update release notes
               env:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-              run: gh release edit nightly --repo "${{ github.repository }}" --notes-file notes.md
+              run: gh release edit "${RELEASE_NAME}" --repo "${{ github.repository }}" --notes-file notes.md
 
             - name: Upload assets (overwrite if exist)
               env:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              shell: bash
               run: |
+                  set -euo pipefail
                   shopt -s nullglob
                   for f in dist/*; do
                     echo "Uploading $f"
-                    gh release upload nightly "$f" --clobber --repo "${{ github.repository }}"
+                    gh release upload "${RELEASE_NAME}" "$f" --clobber --repo "${{ github.repository }}"
                   done
