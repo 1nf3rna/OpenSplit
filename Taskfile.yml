@@ -120,10 +120,20 @@ tasks:
             CGO_ENABLED:
                 sh: |
                     echo 1
+
+            # If env WAILS_TAGS is set (e.g. by GHA), use it.
+            # Otherwise compute tags dynamically for local dev.
             WAILS_TAGS:
                 sh: |
                     set -euo pipefail
-                    # Only Linux uses x11/webkit tags in your scheme
+
+                    if [ -n "${WAILS_TAGS+x}" ]; then
+                      # env var exists (may be empty)
+                      echo "${WAILS_TAGS}"
+                      exit 0
+                    fi
+
+                    # --- dynamic fallback ---
                     if [ "{{OS}}" != "linux" ]; then
                       echo ""
                       exit 0
@@ -131,12 +141,10 @@ tasks:
 
                     tags=""
 
-                    # X11 tag only when actually under X11
                     if [ "${XDG_SESSION_TYPE:-}" = "x11" ]; then
                       tags="x11"
                     fi
 
-                    # WebKitGTK tag based on installed pkg-config module
                     if command -v pkg-config >/dev/null 2>&1; then
                       if pkg-config --exists webkit2gtk-4.1; then
                         if [ -n "$tags" ]; then tags="$tags,webkit2_41"; else tags="webkit2_41"; fi
@@ -146,6 +154,7 @@ tasks:
                     fi
 
                     echo "$tags"
+
             WAILS_TAG_ARGS:
                 sh: |
                     set -euo pipefail

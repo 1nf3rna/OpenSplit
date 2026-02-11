@@ -84,6 +84,8 @@ jobs:
 
             - name: Wails build
               shell: bash
+              env:
+                  WAILS_TAGS: ${{ matrix.tags }}
               run: task build
 
             - name: Package
