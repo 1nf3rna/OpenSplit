@@ -94,4 +94,21 @@
     ::placeholder {
         color: #808080; /* Example: a light gray color */
     }
+
+    tr.seg-group > td {
+        background: var(--group-bg);
+    }
+
+    tr.seg-group-parent > td {
+        filter: brightness(1.15);
+        font-weight: 600;
+    }
+
+    tr.seg-group-child > td {
+        filter: brightness(0.95);
+    }
+    
+    tr.seg-group:hover > td {
+        filter: brightness(1.25);
+    }
 }

@@ -6,7 +6,7 @@ import { EventsEmit, EventsOn, WindowGetPosition, WindowGetSize } from "../wails
 import Config from "./components/Config";
 import SplitEditor from "./components/editor/SplitEditor";
 import Splitter from "./components/splitter/Splitter";
-import Welcome from "./components/splitter/Welcome";
+import Welcome from "./components/Welcome";
 import { ConfigPayload } from "./models/configPayload";
 import SessionPayload from "./models/sessionPayload";
 import SplitFilePayload from "./models/splitFilePayload";

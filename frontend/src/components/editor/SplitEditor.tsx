@@ -5,51 +5,18 @@ import {
     faArrowUpFromBracket,
     faFolder,
     faTrash,
-    IconDefinition,
 } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 import { Dispatch, ExportSplitFile } from "../../../wailsjs/go/dispatcher/Service";
 import { WindowCenter, WindowSetSize } from "../../../wailsjs/runtime";
 import { Command } from "../../App";
-import { useClickOutside } from "../../hooks/useClickOutside";
 import SegmentPayload from "../../models/segmentPayload";
 import SplitFilePayload from "../../models/splitFilePayload";
 import { msToParts, partsToMS, TimeParts } from "../splitter/Timer";
 import TimeRow from "./TimeRow";
-
-type GroupCtx = { bg: string };
-
-function hashStringToInt(s: string): number {
-    let h = 2166136261; // FNV-1a-ish
-    for (let i = 0; i < s.length; i++) {
-        h ^= s.charCodeAt(i);
-        h = Math.imul(h, 16777619);
-    }
-    return h >>> 0;
-}
-
-function colorFromId(id: string): string {
-    const n = hashStringToInt(id);
-
-    const hue = n % 360;
-
-    // Keep saturation strong but not neon
-    const sat = 45 + (n % 15); // 45–59%
-
-    // Dark background range
-    const light = 18 + (n % 10); // 18–27%
-
-    return `hsl(${hue} ${sat}% ${light}%)`;
-}
-
-type Game = {
-    id: string;
-    names: { international: string };
-    assets: { "cover-tiny": { uri: string } };
-    released: string;
-};
+import {colorFromId, GroupCtx} from "./hashColor";
+import {IconButton} from "../Tooltip";
 
 type SplitEditorParams = {
     splitFilePayload: SplitFilePayload | null;
@@ -105,107 +72,22 @@ function findNodeMutable(
     return null;
 }
 
-/**
- * Minimal tooltip wrapper:
- * - No external deps
- * - Accessible enough: uses title + aria-label + data-tooltip for CSS tooltip
- */
-function IconButton({
-    icon,
-    onClick,
-    tooltip,
-    show = true,
-}: {
-    icon: IconDefinition;
-    onClick: () => void;
-    tooltip: string;
-    show?: boolean;
-}) {
-    if (!show) return null;
-
-    return (
-        <button
-            type="button"
-            className="icon-btn has-tooltip"
-            onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onClick();
-            }}
-            aria-label={tooltip}
-            title={tooltip} // fallback if CSS isn't loaded
-        >
-            <FontAwesomeIcon icon={icon} />
-            <span role="tooltip" className="tooltip-bubble">
-                {tooltip}
-            </span>
-        </button>
-    );
-}
-
-export default function SplitEditor({ splitFilePayload, speedRunAPIBase }: SplitEditorParams) {
-    // Clear modal results which will close the modal when we click outside the modal
-    const clickOutsideRef = useRef<HTMLDivElement | null>(null);
-    useClickOutside(clickOutsideRef, () => {
-        setGameResults([]);
-    });
-
+export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
     // Is this a new file or are we editing?
     const editing = splitFilePayload != null;
 
-    // Segment stats
+    const [platform, setPlatform] = React.useState<string>(splitFilePayload?.platform ?? "SNES");
     const [gameName, setGameName] = React.useState<string>(splitFilePayload?.game_name ?? "");
     const [gameCategory, setGameCategory] = React.useState<string>(splitFilePayload?.game_category ?? "");
     const [attempts, setAttempts] = React.useState<number>(splitFilePayload?.attempts ?? 0);
     const [segments, setSegments] = useState<SegmentPayload[]>(splitFilePayload?.segments ?? []);
     const [offsetMS, setOffsetMS] = React.useState(0);
 
-    // Speedrun search
-    const [gameResults, setGameResults] = React.useState<Game[]>([]);
-    const timeoutID = useRef<number>(0);
-
-    // Exporter
-    const [platform, setPlatform] = React.useState<string>(splitFilePayload?.platform ?? "SNES");
-
     // Position and size the edit window
     useEffect(() => {
         WindowSetSize(1000, 900);
         WindowCenter();
     }, []);
-
-    useEffect(() => {
-        (async () => {
-            if (!splitFilePayload) return;
-            console.log(splitFilePayload);
-            setGameName(splitFilePayload.game_name);
-            setGameCategory(splitFilePayload.game_category);
-            setAttempts(splitFilePayload.attempts);
-            setSegments(splitFilePayload.segments);
-            setOffsetMS(splitFilePayload.offset);
-        })();
-    }, []);
-
-    const searchSpeedrun = async () => {
-        if (!speedRunAPIBase) return;
-        const q = gameName.trim();
-        if (!q) {
-            setGameResults([]);
-            return;
-        }
-
-        clearTimeout(timeoutID.current);
-        const controller = new AbortController();
-        timeoutID.current = setTimeout(async () => {
-            fetch(`${speedRunAPIBase}/games?name=${encodeURIComponent(gameName)}`, {
-                signal: controller.signal,
-            })
-                .then((res) => res.json())
-                .then((data) => setGameResults(data.data))
-                .catch((err) => {
-                    if (err.name !== "AbortError") console.error("search failed:", err);
-                });
-        }, 500);
-    };
 
     const addSegment = (parent: SegmentPayload | null) => {
         if (parent === null) {
@@ -311,7 +193,6 @@ export default function SplitEditor({ splitFilePayload, speedRunAPIBase }: Split
         setSegments((prev) => updateRecursive(prev));
     };
 
-    // 1) Move up/down among siblings
     const moveSegmentUp = (id: string) => {
         setSegments((prev) => {
             const root = cloneSegments(prev);
@@ -346,7 +227,6 @@ export default function SplitEditor({ splitFilePayload, speedRunAPIBase }: Split
         });
     };
 
-    // 2) Group into previous sibling
     const groupIntoPreviousSibling = (id: string) => {
         setSegments((prev) => {
             const root = cloneSegments(prev);
@@ -368,7 +248,6 @@ export default function SplitEditor({ splitFilePayload, speedRunAPIBase }: Split
         });
     };
 
-    // 3) Ungroup to top-level
     const ungroupToTopLevel = (id: string) => {
         setSegments((prev) => {
             const root = cloneSegments(prev);
@@ -422,17 +301,10 @@ export default function SplitEditor({ splitFilePayload, speedRunAPIBase }: Split
             const isGroupParentRow = !!ownGroup;
             const isGroupChildRow = !ownGroup && isDirectChild && !!inheritedGroup;
 
-            // Border box behavior:
-            // - parent row: top border
-            // - all rows in group: left/right
-            // - last direct child row: bottom border
-            const childIsLastInDirectGroup = isGroupChildRow && i === list.length - 1;
-
             const rowClassName = [
                 inGroup ? "seg-group" : "",
                 isGroupParentRow ? "seg-group-parent" : "",
                 isGroupChildRow ? "seg-group-child" : "",
-                childIsLastInDirectGroup ? "seg-group-bottom" : "",
             ]
                 .filter(Boolean)
                 .join(" ");
@@ -529,43 +401,12 @@ export default function SplitEditor({ splitFilePayload, speedRunAPIBase }: Split
                     <input
                         value={gameName}
                         onChange={(e) => setGameName(e.target.value)}
-                        onBlur={() => {
-                            clearTimeout(timeoutID.current);
-                        }}
-                        onKeyUp={searchSpeedrun}
                         id="game_name"
                         name="game_name"
                         type="text"
                         autoComplete="off"
                     />
                 </div>
-
-                {gameResults.length > 0 && (
-                    <div ref={clickOutsideRef} className="autocomplete">
-                        <ul>
-                            {gameResults.map((gameResult) => (
-                                <li
-                                    onClick={() => {
-                                        setGameName(gameResult.names.international);
-                                        setGameResults([]);
-                                    }}
-                                    key={gameResult.id}
-                                >
-                                    <div className="autocomplete-item">
-                                        <img
-                                            src={gameResult.assets["cover-tiny"].uri}
-                                            alt={gameResult.assets["cover-tiny"].uri}
-                                        />
-                                        <div className="game-info">
-                                            <strong>{gameResult.names.international}</strong>
-                                            <span>{gameResult.released}</span>
-                                        </div>
-                                    </div>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                )}
 
                 <div className="row">
                     <label htmlFor="game_category">Category</label>
