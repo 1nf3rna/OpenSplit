@@ -4,6 +4,8 @@ import (
 	"sync"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
+	"github.com/zellydev-games/opensplit/command"
+	"github.com/zellydev-games/opensplit/dto"
 	"github.com/zellydev-games/opensplit/logger"
 )
 
@@ -19,27 +21,11 @@ type FolderProvider interface {
 	OpenSkinsDir()
 }
 
-// Command bytes are sent to the Service.Dispatch method receiver to indicate the state machine should take some action.
-type Command byte
-
-const (
-	QUIT Command = iota
-	NEW
-	LOAD
-	EDIT
-	CANCEL
-	SUBMIT
-	CLOSE
-	RESET
-	SAVE
-	SPLIT
-	UNDO
-	SKIP
-	PAUSE
-	TOGGLEGLOBAL
-	FOCUS
-	HELLO
-)
+type RepoProvider interface {
+	LoadSplitFile() (dto.SplitFile, error)
+	SaveSplitFile(dto.SplitFile) error
+	Export() error
+}
 
 // DispatchReply is sent in response to Dispatch
 //
@@ -50,7 +36,7 @@ type DispatchReply struct {
 }
 
 type DispatchReceiver interface {
-	ReceiveDispatch(Command, *string) (DispatchReply, error)
+	ReceiveDispatch(command.Command, *string) (DispatchReply, error)
 }
 
 type Service struct {
@@ -58,24 +44,27 @@ type Service struct {
 	receiver       DispatchReceiver
 	runtime        RuntimeProvider
 	folderProvider FolderProvider
+	repo           RepoProvider
 }
 
 func NewService(receiver DispatchReceiver,
 	runtime RuntimeProvider,
 	folderProvider FolderProvider,
+	repo RepoProvider,
 ) *Service {
 	return &Service{
 		runtime:        runtime,
 		receiver:       receiver,
 		folderProvider: folderProvider,
+		repo:           repo,
 	}
 }
 
-func (s *Service) Dispatch(command Command, payload *string) (DispatchReply, error) {
-	logger.Debugf(logModule, "dispatching command: %v", command)
+func (s *Service) Dispatch(cmd command.Command, payload *string) (DispatchReply, error) {
+	logger.Debugf(logModule, "dispatching cmd: %v", cmd)
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.receiver.ReceiveDispatch(command, payload)
+	return s.receiver.ReceiveDispatch(cmd, payload)
 }
 
 func (s *Service) OpenSplitFileFolder() {
@@ -84,4 +73,8 @@ func (s *Service) OpenSplitFileFolder() {
 
 func (s *Service) OpenSkinsFolder() {
 	s.folderProvider.OpenSkinsDir()
+}
+
+func (s *Service) ExportSplitFile(platform string) error {
+	return s.repo.Export()
 }

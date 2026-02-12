@@ -28,3 +28,34 @@ func DomainToDTO(svc *session.Service) *dto.Session {
 		Dirty:               svc.Dirty(),
 	}
 }
+
+func CleanSplitFile(dtoSplitFile dto.SplitFile) (dto.SplitFile, error) {
+	splitFile, err := DTOSplitFileToDomain(dtoSplitFile)
+	if err != nil {
+		return dto.SplitFile{}, err
+	}
+
+	sf := session.DeepCopySplitFile(&splitFile)
+	sf.WindowY = 100
+	sf.WindowX = 100
+	sf.Attempts = 0
+	sf.SOB = 0
+	sf.Runs = []session.Run{}
+	sf.PB = nil
+
+	for i := 0; i < len(sf.Segments); i++ {
+		clearSegmentRecursive(&sf.Segments[i])
+	}
+
+	return DomainSplitFileToDTO(sf), nil
+}
+
+func clearSegmentRecursive(segment *session.Segment) {
+	segment.PB = 0
+	segment.Gold = 0
+	segment.Average = 0
+
+	for i := 0; i < len(segment.Children); i++ {
+		clearSegmentRecursive(&segment.Children[i])
+	}
+}
