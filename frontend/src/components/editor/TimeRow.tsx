@@ -1,130 +1,58 @@
-import { useEffect, useRef } from "react";
-
-import { numeric, TimeParts } from "../splitter/Timer";
+import {msToParts, numeric, partsToMS, TimeParts} from "../splitter/Timer";
+import {forwardRef, RefObject, useImperativeHandle, useRef} from "react";
 
 type timeRowParams = {
-    id: string;
-    time: TimeParts | null;
-    onChangeCallback: (idx: string, time: TimeParts) => void;
+    time: number | null;
 };
 
-type timeRowElements = {
-    hours: HTMLInputElement | null;
-    minutes: HTMLInputElement | null;
-    seconds: HTMLInputElement | null;
-    centis: HTMLInputElement | null;
+type Handle = {
+    getMillis(): number;
 };
 
-export default function TimeRow({ id, time, onChangeCallback }: timeRowParams) {
-    // Get refs to all the parts so we can update all at once
-    const timeRef = useRef<timeRowElements>({
-        hours: null,
-        minutes: null,
-        seconds: null,
-        centis: null,
-    });
+export const TimeRow = forwardRef<Handle, timeRowParams>(
+    (props, ref) => {
+    const hourRef: RefObject<HTMLInputElement | null> = useRef(null)
+    const minuteRef: RefObject<HTMLInputElement | null> = useRef(null)
+    const secondRef: RefObject<HTMLInputElement | null> = useRef(null)
+    const centiRef: RefObject<HTMLInputElement | null> = useRef(null)
 
-    // Set initial values from the passed in timeParts
-    useEffect(() => {
-        let el = timeRef.current.hours;
-        if (el) {
-            el.value = time?.hours.toString() ?? "";
+    useImperativeHandle(ref, () => ({
+        getMillis: () => {
+            return partsToMS({
+                negative: false,
+                hours: parseInt(hourRef.current?.value ?? "0", 10),
+                minutes: parseInt(minuteRef.current?.value ?? "0", 10),
+                seconds: parseInt(secondRef.current?.value ?? "0", 10),
+                centis: parseInt(centiRef.current?.value ?? "0", 10),
+            })
         }
-
-        el = timeRef.current.minutes;
-        if (el) {
-            el.value = time?.minutes.toString() ?? "";
-        }
-
-        el = timeRef.current.seconds;
-        if (el) {
-            el.value = time?.seconds.toString() ?? "";
-        }
-
-        el = timeRef.current.centis;
-        if (el) {
-            el.value = time?.centis.toString() ?? "";
-        }
-    }, []);
-
-    const handleChange = () => {
-        let hours = timeRef.current.hours?.value ?? "0";
-        let minutes = timeRef.current.minutes?.value ?? "0";
-        let seconds = timeRef.current.seconds?.value ?? "0";
-        let centis = timeRef.current.centis?.value ?? "0";
-
-        hours = numeric(hours) ? hours : "";
-        minutes = numeric(minutes) ? minutes : "";
-        seconds = numeric(seconds) ? seconds : "";
-        centis = numeric(centis) ? centis : "";
-
-        const hoursNum = numeric(hours.trim()) ? Number(hours) : 0;
-        const minutesNum = Math.min(Math.max(numeric(minutes.trim()) ? Number(minutes) : 0, 0), 59);
-        const secondsNum = Math.min(Math.max(numeric(seconds.trim()) ? Number(seconds) : 0, 0), 59);
-        const centisNum = Math.min(Math.max(numeric(centis.trim()) ? Number(centis) : 0, 0), 99);
-
-        let el = timeRef.current.hours;
-        if (el) {
-            el.value = hoursNum.toString() ?? "";
-        }
-
-        el = timeRef.current.minutes;
-        if (el) {
-            el.value = minutesNum.toString() ?? "";
-        }
-
-        el = timeRef.current.seconds;
-        if (el) {
-            el.value = secondsNum.toString() ?? "";
-        }
-
-        el = timeRef.current.centis;
-        if (el) {
-            el.value = centisNum.toString() ?? "";
-        }
-
-        onChangeCallback(id, {
-            negative: false,
-            hours: hoursNum,
-            minutes: minutesNum,
-            seconds: secondsNum,
-            centis: centisNum,
-        });
-    };
+     }))
 
     return (
         <div className="segment-time">
             <input
-                ref={(el) => {
-                    timeRef.current.hours = el;
-                }}
+                ref={hourRef}
                 placeholder="H"
-                onChange={handleChange}
+                defaultValue={props.time != null ? msToParts(props.time).hours : ""}
             />
             <span>:</span>
             <input
-                ref={(el) => {
-                    timeRef.current.minutes = el;
-                }}
+                ref={minuteRef}
                 placeholder="MM"
-                onChange={handleChange}
+                defaultValue={props.time != null ? msToParts(props.time).minutes : ""}
             />
             <span>:</span>
             <input
-                ref={(el) => {
-                    timeRef.current.seconds = el;
-                }}
+                ref={secondRef}
                 placeholder="SS"
-                onChange={handleChange}
+                defaultValue={props.time != null ? msToParts(props.time).seconds : ""}
             />
             <span>.</span>
             <input
-                ref={(el) => {
-                    timeRef.current.centis = el;
-                }}
+                ref={centiRef}
                 placeholder={"cc"}
-                onChange={handleChange}
+                defaultValue={props.time != null ? msToParts(props.time).centis : ""}
             />
         </div>
     );
-}
+});

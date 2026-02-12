@@ -107,7 +107,7 @@
     tr.seg-group-child > td {
         filter: brightness(0.95);
     }
-    
+
     tr.seg-group:hover > td {
         filter: brightness(1.25);
     }

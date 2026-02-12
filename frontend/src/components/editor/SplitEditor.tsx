@@ -13,8 +13,7 @@ import { WindowCenter, WindowSetSize } from "../../../wailsjs/runtime";
 import { Command } from "../../App";
 import SegmentPayload from "../../models/segmentPayload";
 import SplitFilePayload from "../../models/splitFilePayload";
-import { msToParts, partsToMS, TimeParts } from "../splitter/Timer";
-import TimeRow from "./TimeRow";
+import {TimeRow} from "./TimeRow";
 import {colorFromId, GroupCtx} from "./hashColor";
 import {IconButton} from "../Tooltip";
 
@@ -166,33 +165,6 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
         await Dispatch(Command.SUBMIT, payload);
     };
 
-    const handleTimeChange = (id: string, time: TimeParts, isBest: boolean) => {
-        const ms = partsToMS(time);
-
-        function updateRecursive(list: SegmentPayload[]): SegmentPayload[] {
-            return list.map((seg) => {
-                if (seg.id === id) {
-                    return new SegmentPayload({
-                        ...seg,
-                        pb: isBest ? ms : seg.pb,
-                        average: isBest ? seg.average : ms,
-                    });
-                }
-
-                if ((seg.children ?? []).length > 0) {
-                    return new SegmentPayload({
-                        ...seg,
-                        children: updateRecursive(seg.children ?? []),
-                    });
-                }
-
-                return seg;
-            });
-        }
-
-        setSegments((prev) => updateRecursive(prev));
-    };
-
     const moveSegmentUp = (id: string) => {
         setSegments((prev) => {
             const root = cloneSegments(prev);
@@ -281,6 +253,9 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
         inheritedGroup: GroupCtx | null,
         isDirectChild: boolean,
     ) {
+        let totalAvg = 0;
+        let totalBest = 0;
+
         return list.map((segment, i) => {
             const hasChildren = (segment.children ?? []).length > 0;
 
@@ -315,7 +290,7 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
             const nextInheritedGroup = ownGroup ?? null;
             const nextIsDirectChild = !!ownGroup;
 
-            return (
+            const frag =  (
                 <React.Fragment key={segment.id}>
                     <tr className={rowClassName} style={rowStyle}>
                         <td>
@@ -355,9 +330,7 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
                         <td>
                             {!hasChildren && (
                                 <TimeRow
-                                    id={segment.id}
-                                    time={segment.average ? msToParts(segment.average) : null}
-                                    onChangeCallback={(id, ts) => handleTimeChange(id, ts, false)}
+                                    time={segment.average ? segment.average + totalAvg : null}
                                 />
                             )}
                         </td>
@@ -365,9 +338,7 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
                         <td>
                             {!hasChildren && (
                                 <TimeRow
-                                    id={segment.id}
-                                    time={segment.pb ? msToParts(segment.pb) : null}
-                                    onChangeCallback={(id, ts) => handleTimeChange(id, ts, true)}
+                                    time={segment.pb ? segment.pb + totalBest : null}
                                 />
                             )}
                         </td>
@@ -389,6 +360,12 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
                         renderRows(segment.children ?? [], depth + 1, nextInheritedGroup, nextIsDirectChild)}
                 </React.Fragment>
             );
+
+            if (!hasChildren) {
+                totalAvg += segment.average
+                totalBest += segment.pb;
+            }
+            return frag;
         });
     }
 
