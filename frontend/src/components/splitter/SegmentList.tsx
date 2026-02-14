@@ -227,13 +227,6 @@ export default function SegmentList({ sessionPayload, comparison }: SplitListPar
         return m;
     }, [sessionPayload.leaf_segments]);
 
-    // Determine the final leaf segment id (so we can render it separately)
-    const finalLeafId = useMemo(() => {
-        const leaves = sessionPayload.leaf_segments;
-        if (!leaves || leaves.length === 0) return null;
-        return leaves[leaves.length - 1].id;
-    }, [sessionPayload.leaf_segments]);
-
     const parentById = useMemo(() => {
         const m = new Map<string, string | null>();
         for (const fs of flatSegments) {
@@ -242,6 +235,36 @@ export default function SegmentList({ sessionPayload, comparison }: SplitListPar
         return m;
     }, [flatSegments]);
     const [expandedParents, setExpandedParents] = useState<Set<string>>(() => new Set());
+
+    const segmentById = useMemo(() => {
+        const m = new Map<string, SegmentPayload>();
+        for (const fs of flatSegments) m.set(fs.Segment.id, fs.Segment);
+        return m;
+    }, [flatSegments]);
+
+    // For each parent segment id, find the "last" leaf (by leaf_segments order) in its subtree.
+    const lastLeafByParentId = useMemo(() => {
+        const result = new Map<string, string>(); // parentId -> leafId
+
+        if (!sessionPayload.leaf_segments || sessionPayload.leaf_segments.length === 0) return result;
+
+        // For each leaf, walk ancestors and assign/overwrite (later leaves overwrite earlier => "last" wins)
+        for (const leaf of sessionPayload.leaf_segments) {
+            const ancestors = getAncestorIds(leaf.id, parentById);
+            for (const anc of ancestors) {
+                result.set(anc, leaf.id);
+            }
+        }
+
+        return result;
+    }, [sessionPayload.leaf_segments, parentById]);
+
+    // Determine the final leaf segment id (so we can render it separately)
+    const finalLeafId = useMemo(() => {
+        const leaves = sessionPayload.leaf_segments;
+        if (!leaves || leaves.length === 0) return null;
+        return leaves[leaves.length - 1].id;
+    }, [sessionPayload.leaf_segments]);
 
     useEffect(() => {
         const leaves = sessionPayload.leaf_segments;
@@ -321,14 +344,38 @@ export default function SegmentList({ sessionPayload, comparison }: SplitListPar
                     </button>
                 ) : null;
 
+                const lastLeafId = lastLeafByParentId.get(segmentData.Segment.id) ?? null;
+                const lastLeafSplit = lastLeafId ? sessionPayload.current_run?.splits[lastLeafId] ?? null : null;
+
+                // Comparison time (cumulative display) pulled from last leaf
+                let parentComparison: JSX.Element | null = null;
+
+                // Delta pulled from last leaf vs its cumulative target
+                let parentDelta: JSX.Element | null = null;
+
+                if (lastLeafId && lastLeafSplit) {
+                    const leafSeg = segmentById.get(lastLeafId);
+                    const cTarget = targets.cumulative[lastLeafId] ?? null;
+                    const iTarget = targets.individual[lastLeafId] ?? null;
+
+                    if (leafSeg) {
+                        parentComparison = getSegmentDisplayTime(leafSeg, lastLeafSplit, cTarget, iTarget);
+                    }
+
+                    if (cTarget != null) {
+                        const delta = lastLeafSplit.current_cumulative - cTarget;
+                        parentDelta = getDeltaDisplayTime(delta);
+                    }
+                }
+
                 main.push(
                     <tr key={segmentData.Segment.id} className="parentRow">
                         <td className="splitName" style={{ paddingLeft: segmentData.Depth * 16 }}>
                             {toggle}
                             <strong>{segmentData.Segment.name}</strong>
                         </td>
-                        <td className="splitDelta" />
-                        <td className="splitComparison" />
+                        <td className="splitDelta">{parentDelta}</td>
+                        <td className="splitComparison">{parentComparison}</td>
                     </tr>,
                 );
                 continue;
