@@ -345,7 +345,7 @@ export default function SegmentList({ sessionPayload, comparison }: SplitListPar
                 ) : null;
 
                 const lastLeafId = lastLeafByParentId.get(segmentData.Segment.id) ?? null;
-                const lastLeafSplit = lastLeafId ? sessionPayload.current_run?.splits[lastLeafId] ?? null : null;
+                const lastLeafSplit = lastLeafId ? (sessionPayload.current_run?.splits[lastLeafId] ?? null) : null;
 
                 // Comparison time (cumulative display) pulled from last leaf
                 let parentComparison: JSX.Element | null = null;

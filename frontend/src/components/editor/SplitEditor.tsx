@@ -13,9 +13,9 @@ import { WindowCenter, WindowSetSize } from "../../../wailsjs/runtime";
 import { Command } from "../../App";
 import SegmentPayload from "../../models/segmentPayload";
 import SplitFilePayload from "../../models/splitFilePayload";
-import {TimeRow} from "./TimeRow";
-import {colorFromId, GroupCtx} from "./hashColor";
-import {IconButton} from "../Tooltip";
+import { IconButton } from "../Tooltip";
+import { colorFromId, GroupCtx } from "./hashColor";
+import { TimeRow } from "./TimeRow";
 
 type SplitEditorParams = {
     splitFilePayload: SplitFilePayload | null;
@@ -290,7 +290,7 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
             const nextInheritedGroup = ownGroup ?? null;
             const nextIsDirectChild = !!ownGroup;
 
-            const frag =  (
+            const frag = (
                 <React.Fragment key={segment.id}>
                     <tr className={rowClassName} style={rowStyle}>
                         <td>
@@ -328,20 +328,10 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
                         </td>
 
                         <td>
-                            {!hasChildren && (
-                                <TimeRow
-                                    time={segment.average ? segment.average + totalAvg : null}
-                                />
-                            )}
+                            {!hasChildren && <TimeRow time={segment.average ? segment.average + totalAvg : null} />}
                         </td>
 
-                        <td>
-                            {!hasChildren && (
-                                <TimeRow
-                                    time={segment.pb ? segment.pb + totalBest : null}
-                                />
-                            )}
-                        </td>
+                        <td>{!hasChildren && <TimeRow time={segment.pb ? segment.pb + totalBest : null} />}</td>
 
                         <td>
                             <IconButton icon={faFolder} tooltip="Add subsegment" onClick={() => addSegment(segment)} />
@@ -362,7 +352,7 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
             );
 
             if (!hasChildren) {
-                totalAvg += segment.average
+                totalAvg += segment.average;
                 totalBest += segment.pb;
             }
             return frag;

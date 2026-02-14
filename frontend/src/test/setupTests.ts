@@ -1,6 +1,6 @@
-import "@testing-library/jest-dom"
+import "@testing-library/jest-dom";
 
-import { vi } from "vitest"
+import { vi } from "vitest";
 
 vi.mock("../../wailsjs/runtime/runtime", () => ({
     EventsOn: vi.fn(),
@@ -8,4 +8,4 @@ vi.mock("../../wailsjs/runtime/runtime", () => ({
     EventsEmit: vi.fn(),
     WindowSetTitle: vi.fn(),
     WindowSetSize: vi.fn(),
-}))
+}));

@@ -1,5 +1,6 @@
-import {msToParts, numeric, partsToMS, TimeParts} from "../splitter/Timer";
-import {forwardRef, RefObject, useImperativeHandle, useRef} from "react";
+import { forwardRef, RefObject, useImperativeHandle, useRef } from "react";
+
+import { msToParts, partsToMS } from "../splitter/Timer";
 
 type timeRowParams = {
     time: number | null;
@@ -9,12 +10,11 @@ type Handle = {
     getMillis(): number;
 };
 
-export const TimeRow = forwardRef<Handle, timeRowParams>(
-    (props, ref) => {
-    const hourRef: RefObject<HTMLInputElement | null> = useRef(null)
-    const minuteRef: RefObject<HTMLInputElement | null> = useRef(null)
-    const secondRef: RefObject<HTMLInputElement | null> = useRef(null)
-    const centiRef: RefObject<HTMLInputElement | null> = useRef(null)
+export const TimeRow = forwardRef<Handle, timeRowParams>((props, ref) => {
+    const hourRef: RefObject<HTMLInputElement | null> = useRef(null);
+    const minuteRef: RefObject<HTMLInputElement | null> = useRef(null);
+    const secondRef: RefObject<HTMLInputElement | null> = useRef(null);
+    const centiRef: RefObject<HTMLInputElement | null> = useRef(null);
 
     useImperativeHandle(ref, () => ({
         getMillis: () => {
@@ -24,17 +24,13 @@ export const TimeRow = forwardRef<Handle, timeRowParams>(
                 minutes: parseInt(minuteRef.current?.value ?? "0", 10),
                 seconds: parseInt(secondRef.current?.value ?? "0", 10),
                 centis: parseInt(centiRef.current?.value ?? "0", 10),
-            })
-        }
-     }))
+            });
+        },
+    }));
 
     return (
         <div className="segment-time">
-            <input
-                ref={hourRef}
-                placeholder="H"
-                defaultValue={props.time != null ? msToParts(props.time).hours : ""}
-            />
+            <input ref={hourRef} placeholder="H" defaultValue={props.time != null ? msToParts(props.time).hours : ""} />
             <span>:</span>
             <input
                 ref={minuteRef}
