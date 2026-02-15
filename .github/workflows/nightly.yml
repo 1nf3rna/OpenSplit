@@ -98,33 +98,66 @@ jobs:
             - name: Package
               shell: bash
               run: |
-                  set -euo pipefail
-                  mkdir -p out
-                  # Create a suffix from tags (e.g., -x11-webkit2_41) if tags are non-empty
-                  TAGSUFFIX=""
-                  if [ -n "${{ matrix.tags }}" ]; then
-                    TAGSUFFIX="-${{ matrix.tags }}"
-                    TAGSUFFIX="${TAGSUFFIX//,/-}"
-                  fi
-                  ARCHIVE="opensplit-${{ matrix.goos }}-${{ matrix.goarch }}${TAGSUFFIX}.zip"
-                  case "${{ matrix.goos }}" in
-                    windows)
-                      pwsh -NoProfile -Command "Compress-Archive -Path 'build/bin/*' -DestinationPath \"out/$ARCHIVE\" -Force"
-                      ;;
-                    darwin)
-                      ditto -c -k --sequesterRsrc --keepParent build/bin "out/$ARCHIVE"
-                      ;;
-                    *)
-                      (cd build/bin && zip -r "../../out/$ARCHIVE" .)
-                      ;;
-                  esac
-                  echo "ARCHIVE=out/$ARCHIVE" >> "$GITHUB_ENV"
+                set -euo pipefail
+                mkdir -p out
+            
+                # Create a suffix from tags (e.g., -x11-webkit2_41) if tags are non-empty
+                TAGSUFFIX=""
+                if [ -n "${{ matrix.tags }}" ]; then
+                  TAGSUFFIX="-${{ matrix.tags }}"
+                  TAGSUFFIX="${TAGSUFFIX//,/-}"
+                fi
+            
+                APP_NAME="OpenSplit"
+                APP_PATH="build/bin/${APP_NAME}.app"
+            
+                case "${{ matrix.goos }}" in
+                  windows)
+                    ARCHIVE="opensplit-${{ matrix.goos }}-${{ matrix.goarch }}${TAGSUFFIX}.zip"
+                    pwsh -NoProfile -Command "Compress-Archive -Path 'build/bin/*' -DestinationPath \"out/$ARCHIVE\" -Force"
+                    echo "ARCHIVE=out/$ARCHIVE" >> "$GITHUB_ENV"
+                    ;;
+            
+                  darwin)
+                    # Ensure the .app exists
+                    if [ ! -d "$APP_PATH" ]; then
+                      echo "Expected app bundle not found: $APP_PATH"
+                      echo "Contents of build/bin:"
+                      ls -la build/bin || true
+                      exit 1
+                    fi
+            
+                    DMG="opensplit-${{ matrix.goos }}-${{ matrix.goarch }}${TAGSUFFIX}.dmg"
+                    brew install create-dmg
+            
+                    # Stage into a temp folder so create-dmg has a clean source dir
+                    STAGE="$(mktemp -d)"
+                    cp -R "$APP_PATH" "$STAGE/"
+            
+                    # Create DMG containing the app + Applications symlink
+                    create-dmg \
+                      --volname "${APP_NAME}" \
+                      --window-pos 200 120 \
+                      --window-size 800 400 \
+                      --app-drop-link 600 185 \
+                      "out/$DMG" \
+                      "$STAGE"
+            
+                    echo "ARCHIVE=out/$DMG" >> "$GITHUB_ENV"
+                    ;;
+            
+                  *)
+                    ARCHIVE="opensplit-${{ matrix.goos }}-${{ matrix.goarch }}${TAGSUFFIX}.zip"
+                    (cd build/bin && zip -r "../../out/$ARCHIVE" .)
+                    echo "ARCHIVE=out/$ARCHIVE" >> "$GITHUB_ENV"
+                    ;;
+                esac
 
             - name: Upload artifact (per platform)
               uses: actions/upload-artifact@v6
               with:
-                  name: zips-${{ matrix.name }}
-                  path: ${{ env.ARCHIVE }}
+                name: package-${{ matrix.name }}
+                path: ${{ env.ARCHIVE }}
 
     publish:
         name: Publish Release
@@ -147,7 +180,7 @@ jobs:
             - name: Download all artifacts
               uses: actions/download-artifact@v7
               with:
-                  pattern: zips-*
+                  pattern: package-*
                   merge-multiple: true
                   path: dist
 
