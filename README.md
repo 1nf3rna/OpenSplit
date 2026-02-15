@@ -46,8 +46,14 @@
 
 ### Run the app
 1. Download a nightly for your OS (or build from source).
-2. Unzip and run the binary. On macOS, you may need to right-click → Open the first time.
-3. Click "Create Split File" to get started.
+2. Unzip and run the binary. For Mac Open the DMG and move OpenSplit to Applications.
+    * On Mac there's a couple of additional steps:
+    * from a terminal run `xattr -rd com.apple.quarantine /Applications/OpenSplit.app` to clear the qurauntine flags.
+    * Go to Settings > Privacy and Security > Accesibility and remove OpenSplit with the "-" button at the bottom if it exists.
+    * Click the "+" button then add /Applications/OpenSplit.  You'll need to do this every new version.
+    * Go to Settings > Privacy and Security > Input Monitoring and remove OpenSplit with the "-" button at the bottom if it exists.
+    * Click the "+" button then add /Applications/OpenSplit.  You'll need to do this every new version.
+4. Click "Create Split File" to get started.
 
 ### Create your first splitfile
 - Create a new split file (Game + Category).
