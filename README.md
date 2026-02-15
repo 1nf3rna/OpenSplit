@@ -20,10 +20,12 @@
 ---
 
 ## Highlights
+- 🖥️ **Cross Platform**.
 - 🕒 **Fast, readable timer** built for speedrunning.
-- 🎨 **Fully skinnable UI** — drop CSS-based skins (tokens + components + images) into a folder and switch at runtime.
-- 🎮 **Global hotkeys** (Windows first; cross-platform planned).
+- 🎨 **Fully skinnable UI** — drop CSS-based skins into a folder and switch at runtime.
+- 🎮 **Global hotkeys**.
 - 🔎 **Speedrun.com integration** to search games, categories, and fetch art.
+- 🏁 **Racetime.gg integration** to facilitate live racing.
 - 🧰 **Modern stack**: Go + React/TypeScript via Wails.
 
 > Status: early development/alpha. Expect rapid change and frequent nightlies.
@@ -36,8 +38,7 @@
 
 - [Windows (x64)](https://github.com/ZellyDev-Games/OpenSplit/releases/download/nightly/opensplit-windows-amd64.zip)
 - [macOS (Apple Silicon)](https://github.com/ZellyDev-Games/OpenSplit/releases/download/nightly/opensplit-darwin-arm64.zip)
-- [Linux (x64)](https://github.com/ZellyDev-Games/OpenSplit/releases/download/nightly/opensplit-linux-amd64.zip)
-- [Linux (ARM)](https://github.com/ZellyDev-Games/OpenSplit/releases/download/nightly/opensplit-linux-arm64.zip)
+- [Linux]([https://github.com/ZellyDev-Games/OpenSplit/releases/download/nightly/opensplit-linux-amd64.zip](https://github.com/ZellyDev-Games/OpenSplit/releases/tag/nightly))
 
 ---
 
@@ -48,22 +49,20 @@
 2. Unzip and run the binary. On macOS, you may need to right-click → Open the first time.
 3. Click "Create Split File" to get started.
 
-### Create your first splits (basic flow)
+### Create your first splitfile
 - Create a new split file (Game + Category).
 - Add segments, press **Split** hotkey (default: `Space`) to start a run.
 - Press your **Split** hotkey (default: `Space`) at each segment end.
-
-> Configurable hotkeys are coming soon
 
 ---
 
 ## Features (current & roadmap)
 - **Timer**: HH:MM:SS.cc display with centiseconds; formatting adapts to hours/minutes.
-- **Skins**: theme tokens + component styles + images; per-skin folder with live switching (coming soon).
+- **Skins**: theme tokens + component styles + images; per-skin folder with live switching.
 - **Split editor**: add/rename/remove; total attempts.
-- **Hotkeys**: Windows global hooks implemented; cross-platform planned.
+- **Hotkeys**: Cross-platform global hotkeys for Windows, Mac, and X11 Linux distros.  Wayland coming soon.
 - **Data**: simple JSON split files (`.osf`) for portability.
-- **Integrations**: Speedrun.com lookup for game/category art (partially implemented).
+- **Integrations**: Speedrun.com lookup for game/category art.
 
 ---
 
