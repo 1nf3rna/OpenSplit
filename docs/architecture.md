@@ -12,8 +12,11 @@
 
 ### State Machine
 - Manages the overall state of the program.  Defined in `statemachine` package, along with specific states
+
+## Dispatcher
 - Exposes the `Dispatch` method receiver which is the primary way the frontend communicates to the backend
-  - `Dispatch` takes a `Command` and a `Payload`. `Payload` can be null, and the contents depends on the command and current state
+  - `Dispatch` takes a `Command` and a `Payload`. `Payload` can be null, and the contents depends on the command and current state.
+  - Dispatcher should be used to send all state based communication between the backend to the frontend.
 
 ### Session
 - Manages:
@@ -80,7 +83,7 @@ the frontend via EventsEmit
 ## State Management
 - Use React state only for **UI rendering**.
 - Application state (timer, segments, attempts) lives in Go.
-- Subscribe to state changes via events.
+- Communicate state changes from the backend to the front via `bridge`. Subscribe to the events produced from the `bridge` package. 
 
 ---
 
@@ -95,7 +98,7 @@ the frontend via EventsEmit
 
 - **Hotkey Service**:
   - Receives keypresses from an OS-specific provider.
-  - Maps hotkeys to `statemachine.Dispatch` actions (e.g., `Space` → `SPLIT`).
+  - Maps hotkeys to `command.Command` actions (e.g., `Space` → `SPLIT`).
 
 - **Providers**:
   - OS-specific implementations (Windows, Linux, macOS).
