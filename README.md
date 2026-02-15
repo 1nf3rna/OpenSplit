@@ -38,7 +38,7 @@
 
 - [Windows (x64)](https://github.com/ZellyDev-Games/OpenSplit/releases/download/nightly/opensplit-windows-amd64.zip)
 - [macOS (Apple Silicon)](https://github.com/ZellyDev-Games/OpenSplit/releases/download/nightly/opensplit-darwin-arm64.zip)
-- [Linux]([https://github.com/ZellyDev-Games/OpenSplit/releases/download/nightly/opensplit-linux-amd64.zip](https://github.com/ZellyDev-Games/OpenSplit/releases/tag/nightly))
+- [Linux](https://github.com/ZellyDev-Games/OpenSplit/releases/tag/nightly)
 
 ---
 
