@@ -37,7 +37,7 @@
 **Nightly builds** (updated on each merge to `main`):
 
 - [Windows (x64)](https://github.com/ZellyDev-Games/OpenSplit/releases/download/nightly/opensplit-windows-amd64.zip)
-- [macOS (Apple Silicon)](https://github.com/ZellyDev-Games/OpenSplit/releases/download/nightly/opensplit-darwin-arm64.zip)
+- [macOS (Apple Silicon)](https://github.com/ZellyDev-Games/OpenSplit/releases/download/nightly/opensplit-darwin-arm64.zip) (Make sure you read the Quick Start!  There's extra steps to avoid the "damaged file" error.)
 - [Linux](https://github.com/ZellyDev-Games/OpenSplit/releases/tag/nightly)
 
 ---
