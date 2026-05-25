@@ -2,6 +2,8 @@ package statemachine
 
 import (
 	"fmt"
+	"strconv"
+	"time"
 
 	"github.com/zellydev-games/opensplit/bridge"
 	"github.com/zellydev-games/opensplit/command"
@@ -9,6 +11,7 @@ import (
 	"github.com/zellydev-games/opensplit/keyinfo"
 	"github.com/zellydev-games/opensplit/logger"
 	"github.com/zellydev-games/opensplit/repo/adapters"
+	"github.com/zellydev-games/opensplit/session"
 )
 
 // Running represents the state where a dto has been loaded, the UI should be showing the SplitList and the timer.
@@ -90,7 +93,7 @@ func (r *Running) OnExit() error {
 	return nil
 }
 
-func (r *Running) Receive(c command.Command, _ *string) (dispatcher.DispatchReply, error) {
+func (r *Running) Receive(c command.Command, payload *string) (dispatcher.DispatchReply, error) {
 	switch c {
 	case command.CLOSE:
 		logger.Debug(logModule, "Running received CLOSE c")
@@ -117,7 +120,12 @@ func (r *Running) Receive(c command.Command, _ *string) (dispatcher.DispatchRepl
 		}
 	case command.SPLIT:
 		logger.Debug(logModule, "Running received SPLIT c")
-		machine.sessionService.Split()
+
+		result := machine.sessionService.Split()
+
+		if result == session.SplitFinished {
+			machine.runtimeProvider.EventsEmit("opensplit:done")
+		}
 	case command.UNDO:
 		machine.sessionService.Undo()
 	case command.SKIP:
@@ -126,10 +134,47 @@ func (r *Running) Receive(c command.Command, _ *string) (dispatcher.DispatchRepl
 		machine.sessionService.Pause()
 	case command.RESET:
 		_ = machine.promptPartialRun()
-
 		// note: promptPartialRun only adds the partial run to the session's loadedSplitFile's Runs slice.
 		// Nothing has been saved to disk at this point, so keep the file dirty if needs be.
 		machine.sessionService.Reset()
+	case command.DONE:
+		logger.Debug(logModule, "Running received DONE c")
+
+		result := machine.sessionService.Done()
+
+		if result == session.SplitFinished {
+			machine.runtimeProvider.EventsEmit("opensplit:done")
+		}
+	case command.UNDONE:
+		logger.Debug(logModule, "Running received UNDONE c")
+
+		result := machine.sessionService.UnDone()
+
+		if result != session.SplitNoop {
+			machine.runtimeProvider.EventsEmit("opensplit:undone")
+		}
+	case command.SET_RUNTIME_OFFSET:
+		if payload == nil {
+			return dispatcher.DispatchReply{
+				Code:    10,
+				Message: "missing offset payload",
+			}, nil
+		}
+
+		ms, err := strconv.ParseInt(*payload, 10, 64)
+		if err != nil {
+			return dispatcher.DispatchReply{
+				Code:    11,
+				Message: "invalid offset payload",
+			}, nil
+		}
+
+		machine.sessionService.SetRuntimeOffsetOverride(
+			time.Duration(ms) * time.Millisecond,
+		)
+
+	case command.CLEAR_RUNTIME_OFFSET:
+		machine.sessionService.ClearRuntimeOffsetOverride()
 	default:
 		logger.Warnf(logModule, "unhandled default case in Running: %d", c)
 	}
