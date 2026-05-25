@@ -1,8 +1,14 @@
-build/bin
-node_modules
-frontend/dist
 Split Files
 cover.out
 .DS_Store
 coverage.out
+
+# Editor/IDE
 .vscode/*
+
+# Ignoring generated stuff
+frontend/node_modules/
+build/
+frontend/dist/
+frontend/wailsjs/
+frontend/package-lock.json
