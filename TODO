@@ -3,3 +3,4 @@ Accept negative as first input
 Show offset when editting existing file
 offsets not displayed on reset
 get skin from split file if available
+get split file versioning working
