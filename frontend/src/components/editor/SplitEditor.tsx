@@ -81,11 +81,17 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
     const [gameCategory, setGameCategory] = React.useState<string>(splitFilePayload?.game_category ?? "");
     const [attempts, setAttempts] = React.useState<number>(splitFilePayload?.attempts ?? 0);
     const [segments, setSegments] = useState<SegmentPayload[]>(splitFilePayload?.segments ?? []);
-    const [offsetMS, setOffsetMS] = React.useState(0);
+    const [offsetMS, setOffsetMS] = useState(
+        splitFilePayload?.offset ?? 0,
+    );
     const [availableSkins, setAvailableSkins] = useState<string[]>([]);
     const [selectedSkin, setSelectedSkin] = useState(
         splitFilePayload?.selected_skin ?? "",
     );
+
+    useEffect(() => {
+        setOffsetMS(splitFilePayload?.offset ?? 0);
+    }, [splitFilePayload]);
 
     useEffect(() => {
         GetAvailableSkins().then((skins) => {
@@ -101,6 +107,7 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
 
     useEffect(() => {
         console.log("SplitEditor payload", JSON.stringify(splitFilePayload, null, 2));
+        console.log("offsetMS state", offsetMS);
     }, [splitFilePayload]);
 
     // Position and size the edit window
