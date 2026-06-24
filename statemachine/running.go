@@ -101,6 +101,7 @@ func (r *Running) Receive(c command.Command, payload *string) (dispatcher.Dispat
 		if err != nil {
 			return dispatcher.DispatchReply{}, err
 		}
+		machine.skinProvider.SetSkin(machine.configService.SelectedSkin, false)
 		machine.sessionService.CloseRun()
 		machine.repoService.Close()
 		machine.changeState(WELCOME, nil)

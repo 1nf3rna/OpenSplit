@@ -13,17 +13,22 @@ type SplitFile struct {
 	GameName     string
 	GameCategory string
 	Version      int
-	Attempts     int
-	Segments     []Segment
+
+	SelectedSkin string
+
+	Segments []Segment
+	Runs     []Run
+	PB       *Run
+
+	SOB      time.Duration
+	Attempts int
+	Offset   time.Duration
+	Platform string
+
 	WindowX      int
 	WindowY      int
 	WindowHeight int
 	WindowWidth  int
-	SOB          time.Duration
-	Runs         []Run
-	PB           *Run
-	Offset       time.Duration
-	Platform     string
 }
 
 func (s *SplitFile) DeepCopyLeafSegments() []Segment {
@@ -135,17 +140,22 @@ func DeepCopySplitFile(inFile *SplitFile) SplitFile {
 		GameName:     inFile.GameName,
 		GameCategory: inFile.GameCategory,
 		Version:      inFile.Version,
-		Attempts:     inFile.Attempts,
-		Offset:       inFile.Offset,
-		Segments:     segments,
+
+		SelectedSkin: inFile.SelectedSkin,
+
+		Segments: segments,
+		Runs:     runs,
+		PB:       pbRun,
+
+		SOB:      inFile.SOB,
+		Attempts: inFile.Attempts,
+		Offset:   inFile.Offset,
+		Platform: inFile.Platform,
+
 		WindowX:      inFile.WindowX,
 		WindowY:      inFile.WindowY,
-		WindowHeight: inFile.WindowHeight,
 		WindowWidth:  inFile.WindowWidth,
-		SOB:          inFile.SOB,
-		Runs:         runs,
-		PB:           pbRun,
-		Platform:     inFile.Platform,
+		WindowHeight: inFile.WindowHeight,
 	}
 }
 

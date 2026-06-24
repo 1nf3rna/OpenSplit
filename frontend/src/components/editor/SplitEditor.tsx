@@ -11,6 +11,7 @@ import React, { useEffect, useState } from "react";
 import { Dispatch, ExportSplitFile } from "../../../wailsjs/go/dispatcher/Service";
 import { WindowCenter, WindowSetSize } from "../../../wailsjs/runtime";
 import { Command } from "../../App";
+import { GetAvailableSkins, SetSkin } from "../../../wailsjs/go/skin/Service";
 import SegmentPayload from "../../models/segmentPayload";
 import SplitFilePayload from "../../models/splitFilePayload";
 import { IconButton } from "../Tooltip";
@@ -81,6 +82,26 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
     const [attempts, setAttempts] = React.useState<number>(splitFilePayload?.attempts ?? 0);
     const [segments, setSegments] = useState<SegmentPayload[]>(splitFilePayload?.segments ?? []);
     const [offsetMS, setOffsetMS] = React.useState(0);
+    const [availableSkins, setAvailableSkins] = useState<string[]>([]);
+    const [selectedSkin, setSelectedSkin] = useState(
+        splitFilePayload?.selected_skin ?? "",
+    );
+
+    useEffect(() => {
+        GetAvailableSkins().then((skins) => {
+            setAvailableSkins(skins);
+
+            if (splitFilePayload?.selected_skin) {
+                setSelectedSkin(splitFilePayload.selected_skin);
+            } else if (skins.length > 0) {
+                setSelectedSkin(skins[0]);
+            }
+        });
+    }, [splitFilePayload]);
+
+    useEffect(() => {
+        console.log("SplitEditor payload", JSON.stringify(splitFilePayload, null, 2));
+    }, [splitFilePayload]);
 
     // Position and size the edit window
     useEffect(() => {
@@ -145,20 +166,25 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
 
         const newSplitFilePayload = SplitFilePayload.createFrom({
             id: splitFilePayload?.id ?? "",
+            game_name: gameName,
+            game_category: gameCategory,
             version: splitFilePayload?.version ?? 0,
+
+            selected_skin: selectedSkin,
+
+            segments: segments,
             runs: splitFilePayload?.runs ?? [],
+            pb: splitFilePayload?.pb ?? null,
+
+            sob: splitFilePayload?.sob ?? 0,
+            attempts: Number(attempts),
+            offset: offsetMS,
+            platform: platform,
+
             window_x: splitFilePayload?.window_x ?? 100,
             window_y: splitFilePayload?.window_y ?? 100,
             window_height: splitFilePayload?.window_height ?? 550,
             window_width: splitFilePayload?.window_width ?? 350,
-            game_name: gameName,
-            game_category: gameCategory,
-            segments: segments,
-            attempts: Number(attempts),
-            pb: splitFilePayload?.pb ?? null,
-            sob: splitFilePayload?.sob ?? 0,
-            offset: offsetMS,
-            platform: platform,
         });
 
         const payload = JSON.stringify(newSplitFilePayload);
@@ -443,6 +469,22 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
                         <option value={"iOS"}>iOS</option>
                         <option value={"Android"}>Android</option>
                     </select>
+                    <div className="row">
+                        <label htmlFor="skin">Skin</label>
+
+                        <select
+                            style={{ marginLeft: 10 }}
+                            id="skin"
+                            value={selectedSkin}
+                            onChange={(e) => setSelectedSkin(e.target.value)}
+                        >
+                            {availableSkins.map((skin) => (
+                                <option key={skin} value={skin}>
+                                    {skin}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
                 </div>
 
                 <div className="row">
