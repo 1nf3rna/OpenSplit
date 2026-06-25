@@ -119,7 +119,7 @@ export default function Splitter({ sessionPayload, configPayload }: SplitterPara
         <div {...contextMenu.bind} id="splitter">
             <ContextMenu state={contextMenu.state} close={contextMenu.close} items={contextMenuItems} />
             <SegmentList sessionPayload={sessionPayload} comparison={comparison} />
-            <Timer offset={(sessionPayload.loaded_split_file?.offset || 0) * -1} />
+            <Timer offset={sessionPayload.loaded_split_file?.offset || 0} />
         </div>
     );
 }

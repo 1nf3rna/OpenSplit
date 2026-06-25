@@ -119,7 +119,7 @@ func (s *Stopwatch) Reset(offset *time.Duration) {
 	s.running = false
 
 	if offset != nil {
-		s.currentTime = -*offset
+		s.currentTime = *offset
 	} else {
 		s.currentTime = 0
 	}
