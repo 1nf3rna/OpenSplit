@@ -19,20 +19,11 @@ export function ContextMenu({ state, close, items = [] }: ContextMenuProps) {
         const vh = window.innerHeight;
 
         const menuWidth = 200;
-        const menuHeight = Math.max(
-            MIN_MENU_HEIGHT,
-            containerRef.current.offsetHeight,
-        );
+        const menuHeight = Math.max(MIN_MENU_HEIGHT, containerRef.current.offsetHeight);
 
         setPosition({
-            left: Math.max(
-                MENU_MARGIN,
-                Math.min(state.x, vw - menuWidth - MENU_MARGIN),
-            ),
-            top: Math.max(
-                MENU_MARGIN,
-                Math.min(state.y, vh - menuHeight - MENU_MARGIN),
-            ),
+            left: Math.max(MENU_MARGIN, Math.min(state.x, vw - menuWidth - MENU_MARGIN)),
+            top: Math.max(MENU_MARGIN, Math.min(state.y, vh - menuHeight - MENU_MARGIN)),
         });
     }, [state.open, state.x, state.y, items]);
 
@@ -74,21 +65,13 @@ export function ContextMenu({ state, close, items = [] }: ContextMenuProps) {
                     <ul className="cm-list">
                         {items.map((it, i) => {
                             if ((it as MenuSeparator).type === "separator") {
-                                return (
-                                    <li
-                                        key={`sep-${i}`}
-                                        className="cm-separator"
-                                        role="separator"
-                                    />
-                                );
+                                return <li key={`sep-${i}`} className="cm-separator" role="separator" />;
                             }
 
                             const item = it as MenuAction;
                             const disabled = !!item.disabled;
 
-                            const onItemClick = (
-                                e: React.MouseEvent<HTMLButtonElement>,
-                            ) => {
+                            const onItemClick = (e: React.MouseEvent<HTMLButtonElement>) => {
                                 e.stopPropagation();
 
                                 if (disabled) return;
@@ -102,10 +85,7 @@ export function ContextMenu({ state, close, items = [] }: ContextMenuProps) {
                                     <button
                                         type="button"
                                         role="menuitem"
-                                        className={[
-                                            "cm-item",
-                                            disabled ? "cm-item--disabled" : "",
-                                        ].join(" ")}
+                                        className={["cm-item", disabled ? "cm-item--disabled" : ""].join(" ")}
                                         onClick={onItemClick}
                                         disabled={disabled}
                                     >
