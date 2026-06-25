@@ -84,10 +84,24 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
     const [offsetMS, setOffsetMS] = useState(
         splitFilePayload?.offset ?? 0,
     );
+    const [offsetText, setOffsetText] = useState(
+        String(splitFilePayload?.offset ?? 0),
+    );
     const [availableSkins, setAvailableSkins] = useState<string[]>([]);
     const [selectedSkin, setSelectedSkin] = useState(
         splitFilePayload?.selected_skin ?? "",
     );
+
+    useEffect(() => {
+        setOffsetText(String(splitFilePayload?.offset ?? 0));
+    }, [splitFilePayload]);
+
+    const handleOffsetChange = (v: string) => {
+        // Allow empty string, "-" and any integer being typed
+        if (/^-?\d*$/.test(v)) {
+            setOffsetText(v);
+        }
+    };
 
     useEffect(() => {
         setOffsetMS(splitFilePayload?.offset ?? 0);
@@ -147,14 +161,6 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
         setSegments((prev) => updateRecursive(prev));
     }
 
-    const handleOffsetChange = (v: string) => {
-        let t = parseInt(v, 10);
-        if (isNaN(t)) {
-            t = 0;
-        }
-        setOffsetMS(t);
-    };
-
     const deleteSegment = (id: string) => {
         function deleteRecursive(list: SegmentPayload[]): SegmentPayload[] {
             return list
@@ -185,7 +191,10 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
 
             sob: splitFilePayload?.sob ?? 0,
             attempts: Number(attempts),
-            offset: offsetMS,
+            offset:
+                offsetText === "" || offsetText === "-"
+                    ? 0
+                    : parseInt(offsetText, 10),
             platform: platform,
 
             window_x: splitFilePayload?.window_x ?? 100,
@@ -506,14 +515,14 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
                 </div>
 
                 <div className="row">
-                    <label htmlFor="offset">Negative Start Offset (milliseconds)</label>
+                    <label htmlFor="offset">Start Offset (milliseconds)</label>
                     <input
                         onChange={(e) => handleOffsetChange(e.target.value)}
                         id="offsetMS"
                         name="offsetMS"
                         type="text"
                         autoComplete="off"
-                        value={offsetMS}
+                        value={offsetText}
                     />
                 </div>
 
