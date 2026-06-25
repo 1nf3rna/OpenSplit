@@ -48,7 +48,7 @@ func (t *MockTimer) Pause() {
 	t.PauseCalled++
 }
 
-func (t *MockTimer) Reset() {
+func (t *MockTimer) Reset(offset *time.Duration) {
 	t.ResetCalled++
 }
 
