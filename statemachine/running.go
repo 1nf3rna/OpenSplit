@@ -101,7 +101,9 @@ func (r *Running) Receive(c command.Command, payload *string) (dispatcher.Dispat
 		if err != nil {
 			return dispatcher.DispatchReply{}, err
 		}
-		machine.skinProvider.SetSkin(machine.configService.SelectedSkin, false)
+		if err := machine.skinProvider.SetSkin(machine.configService.SelectedSkin, false); err != nil {
+			logger.Errorf(logModule, "failed to set skin: %v", err)
+		}
 		machine.sessionService.CloseRun()
 		machine.repoService.Close()
 		machine.changeState(WELCOME, nil)

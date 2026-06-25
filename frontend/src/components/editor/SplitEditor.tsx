@@ -81,16 +81,10 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
     const [gameCategory, setGameCategory] = React.useState<string>(splitFilePayload?.game_category ?? "");
     const [attempts, setAttempts] = React.useState<number>(splitFilePayload?.attempts ?? 0);
     const [segments, setSegments] = useState<SegmentPayload[]>(splitFilePayload?.segments ?? []);
-    const [offsetMS, setOffsetMS] = useState(
-        splitFilePayload?.offset ?? 0,
-    );
-    const [offsetText, setOffsetText] = useState(
-        String(splitFilePayload?.offset ?? 0),
-    );
+    const [offsetMS, setOffsetMS] = useState(splitFilePayload?.offset ?? 0);
+    const [offsetText, setOffsetText] = useState(String(splitFilePayload?.offset ?? 0));
     const [availableSkins, setAvailableSkins] = useState<string[]>([]);
-    const [selectedSkin, setSelectedSkin] = useState(
-        splitFilePayload?.selected_skin ?? "",
-    );
+    const [selectedSkin, setSelectedSkin] = useState(splitFilePayload?.selected_skin ?? "");
 
     useEffect(() => {
         setOffsetText(String(splitFilePayload?.offset ?? 0));
@@ -191,10 +185,7 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
 
             sob: splitFilePayload?.sob ?? 0,
             attempts: Number(attempts),
-            offset:
-                offsetText === "" || offsetText === "-"
-                    ? 0
-                    : parseInt(offsetText, 10),
+            offset: offsetText === "" || offsetText === "-" ? 0 : parseInt(offsetText, 10),
             platform: platform,
 
             window_x: splitFilePayload?.window_x ?? 100,

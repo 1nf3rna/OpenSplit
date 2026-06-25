@@ -12,7 +12,7 @@ export default class SplitFilePayload {
     segments: SegmentPayload[] = [];
     runs: RunPayload[] = [];
     pb: RunPayload | null = null;
-    
+
     sob: number = 0;
     attempts: number = 0;
     offset: number = 0;
@@ -22,7 +22,7 @@ export default class SplitFilePayload {
     window_y: number = 100;
     window_height: number = 550;
     window_width: number = 350;
-    
+
     constructor(init?: Partial<SplitFilePayload>) {
         if (init) {
             Object.assign(this, init);
