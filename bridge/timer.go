@@ -29,10 +29,21 @@ func (t *Timer) StartUIPump() {
 			select {
 			case <-t.timerEventStopChannel:
 				return
+
 			case currentTime := <-t.timerUpdateChannel:
-				t.runtimeProvider.EventsEmit("timer:update", currentTime.Milliseconds())
+				logger.Infof(
+					logModule,
+					"emitting timer:update=%d",
+					currentTime.Milliseconds(),
+				)
+
+				t.runtimeProvider.EventsEmit(
+					"timer:update",
+					currentTime.Milliseconds(),
+				)
 			}
 		}
 	}()
+
 	logger.Debug(logModule, "started timer UI pump")
 }

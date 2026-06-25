@@ -38,7 +38,7 @@ type Timer interface {
 	Run()
 	Start()
 	Pause()
-	Reset()
+	Reset(offset *time.Duration)
 	GetCurrentTime() time.Duration
 	SubtractTime(duration time.Duration)
 }
@@ -122,11 +122,20 @@ func (s *Service) UpdateWindowDimensions(x, y, w, h int) {
 
 func (s *Service) SetLoadedSplitFile(sf SplitFile) {
 	logger.Debugf(logModule, "setting loaded splitfile to %s", sf.GameName)
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	defer s.sendUpdate()
 
 	s.loadedSplitFile = &sf
+	s.timer.Reset(&sf.Offset)
+
+	logger.Infof(
+		logModule,
+		"loaded splitfile offset=%d",
+		sf.Offset.Milliseconds(),
+	)
+
 	s.leafSegments = getLeafSegments(sf.Segments, nil)
 
 	s.currentRun = nil
@@ -417,9 +426,16 @@ func (s *Service) Run() (Run, bool) {
 // resetLocked assumes that the system is under lock when called.
 func (s *Service) resetLocked() {
 	s.timer.Pause()
-	s.timer.Reset()
+	logger.Infof(
+		logModule,
+		"resetLocked runtimeOffset=%v effectiveOffset=%d",
+		s.runtimeOffsetOverride,
+		s.effectiveOffset().Milliseconds(),
+	)
+	offset := s.effectiveOffset()
+	s.timer.Reset(&offset)
 
-	s.runtimeOffsetOverride = nil
+	// s.runtimeOffsetOverride = nil
 	s.currentRun = nil
 	s.sessionState = Idle
 	s.currentSegmentIndex = -1
@@ -457,7 +473,7 @@ func (s *Service) startNewRun() SplitResult {
 		return SplitNoop
 	}
 
-	s.timer.SubtractTime(s.effectiveOffset())
+	// s.timer.SubtractTime(s.effectiveOffset())
 	// s.timer.SubtractTime(s.loadedSplitFile.Offset)
 	s.timer.Start()
 	s.loadedSplitFile.Attempts++
