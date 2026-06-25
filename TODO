@@ -1,1 +1,6 @@
-get split file versioning working
+get split file versioning working (this will fix modifying the split times)
+right click menu isn't correctly bound to the window size
+populate PB time
+display current world record
+add segment time to displayed data
+support segment images
