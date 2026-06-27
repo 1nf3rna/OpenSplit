@@ -12,7 +12,6 @@ import { Dispatch, ExportSplitFile } from "../../../wailsjs/go/dispatcher/Servic
 import { GetAvailableSkins } from "../../../wailsjs/go/skin/Service";
 import { WindowCenter, WindowSetSize } from "../../../wailsjs/runtime";
 import { Command } from "../../models/command";
-import { GetAvailableSkins } from "../../../wailsjs/go/skin/Service";
 import SegmentPayload from "../../models/segmentPayload";
 import SplitFilePayload from "../../models/splitFilePayload";
 import { IconButton } from "../Tooltip";
