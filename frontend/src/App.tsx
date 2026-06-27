@@ -10,24 +10,7 @@ import Welcome from "./components/Welcome";
 import { ConfigPayload } from "./models/configPayload";
 import SessionPayload from "./models/sessionPayload";
 import SplitFilePayload from "./models/splitFilePayload";
-
-export enum Command {
-    QUIT,
-    NEW,
-    LOAD,
-    EDIT,
-    CANCEL,
-    SUBMIT,
-    CLOSE,
-    RESET,
-    SAVE,
-    SPLIT,
-    UNDO,
-    SKIP,
-    PAUSE,
-    TOGGLEGLOBAL,
-    FOCUS,
-}
+import { Command } from "./models/command";
 
 export enum AppView {
     Welcome = "welcome",
