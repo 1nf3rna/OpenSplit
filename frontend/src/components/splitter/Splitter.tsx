@@ -1,8 +1,8 @@
 import React, { useEffect } from "react";
 
 import { Dispatch } from "../../../wailsjs/go/dispatcher/Service";
-import { WindowSetPosition, WindowSetSize } from "../../../wailsjs/runtime";
-import { Command } from "../../App";
+import { EventsOn, WindowSetPosition, WindowSetSize } from "../../../wailsjs/runtime";
+import { Command } from "../../models/command";
 import { MenuItem, useContextMenu } from "../../hooks/useContextMenu";
 import { ConfigPayload } from "../../models/configPayload";
 import SessionPayload from "../../models/sessionPayload";
@@ -18,6 +18,8 @@ export enum CompareAgainst {
 
 export type Comparison = CompareAgainst.Best | CompareAgainst.Average | CompareAgainst.SumOfBest;
 
+const comparisons: Comparison[] = [CompareAgainst.Average, CompareAgainst.Best, CompareAgainst.SumOfBest];
+
 type SplitterParams = {
     sessionPayload: SessionPayload;
     configPayload: ConfigPayload;
@@ -28,6 +30,24 @@ export default function Splitter({ sessionPayload, configPayload }: SplitterPara
     const [contextMenuItems, setContextMenuItems] = React.useState<MenuItem[]>([]);
     const [comparison, setComparison] = React.useState<Comparison>(CompareAgainst.Average);
     const [globalHotkeys, setGlobalHotkeys] = React.useState<boolean>(configPayload.global_hotkeys_active);
+
+    useEffect(() => {
+        const rotate = (dir: number) => {
+            setComparison((current) => {
+                const index = comparisons.indexOf(current);
+                const next = (index + dir + comparisons.length) % comparisons.length;
+                return comparisons[next];
+            });
+        };
+
+        const unsubLeft = EventsOn("comparison:left", () => rotate(-1));
+        const unsubRight = EventsOn("comparison:right", () => rotate(1));
+
+        return () => {
+            unsubLeft();
+            unsubRight();
+        };
+    }, []);
 
     useEffect(() => {
         (async () => {
