@@ -134,6 +134,44 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
         }
     };
 
+    const updateSegmentIcon = (id: string, event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) {
+            return;
+        }
+
+        const reader = new FileReader();
+
+        reader.onload = () => {
+            updateSegment(id, (segment) => ({
+                ...segment,
+                icon: reader.result as string,
+            }));
+        };
+
+        reader.readAsDataURL(file);
+
+        // allow selecting the same file again later
+        event.target.value = "";
+    };
+
+    function updateSegment(id: string, updater: (segment: SegmentPayload) => SegmentPayload) {
+        function updateRecursive(list: SegmentPayload[]): SegmentPayload[] {
+            return list.map((item) => {
+                if (item.id === id) {
+                    return updater(item);
+                }
+
+                return {
+                    ...item,
+                    children: updateRecursive(item.children ?? []),
+                };
+            });
+        }
+
+        setSegments((prev) => updateRecursive(prev));
+    }
+
     function updateSegmentName(id: string, name: string) {
         function updateRecursive(list: SegmentPayload[]): SegmentPayload[] {
             return list.map((item) => {
@@ -353,6 +391,50 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
                             </div>
                         </td>
 
+                        <td>
+                            <div
+                                style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 8,
+                                }}
+                            >
+                                {segment.icon && (
+                                    <img
+                                        src={segment.icon}
+                                        alt=""
+                                        style={{
+                                            width: 24,
+                                            height: 24,
+                                            objectFit: "contain",
+                                            border: "1px solid #666",
+                                            borderRadius: 2,
+                                        }}
+                                    />
+                                )}
+
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={(e) => updateSegmentIcon(segment.id, e)}
+                                />
+
+                                {segment.icon && (
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            updateSegment(segment.id, (s) => ({
+                                                ...s,
+                                                icon: "",
+                                            }))
+                                        }
+                                    >
+                                        Clear
+                                    </button>
+                                )}
+                            </div>
+                        </td>
+
                         <td style={{ paddingLeft: depth * 20 }}>
                             <input
                                 value={segment.name}
@@ -532,6 +614,7 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
                                 <thead>
                                     <tr>
                                         <th style={{ width: "5%" }}>#</th>
+                                        <th style={{ width: "12%" }}>Icon</th>
                                         <th style={{ width: "50%" }}>Segment Name</th>
                                         <th>
                                             Average Time <small>(HH:MM:SS.ccc)</small>
