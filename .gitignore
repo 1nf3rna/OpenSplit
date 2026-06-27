@@ -13,3 +13,5 @@ build/
 frontend/dist/
 frontend/wailsjs/
 frontend/package-lock.json
+tools/livesplitImageExtractor/Program.exe
+frontend/src/models/command.ts
