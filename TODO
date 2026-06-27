@@ -1,5 +1,5 @@
 get split file versioning working (this will fix modifying the split times)
-add hotkeys to advance and retreat through comparisons
+add comparison type indicator
 display current world record
 add segment time to displayed data
 support segment images
