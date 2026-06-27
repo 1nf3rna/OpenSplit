@@ -1,6 +1,6 @@
 import { Dispatch } from "../../wailsjs/go/dispatcher/Service";
 import { WindowSetSize } from "../../wailsjs/runtime";
-import { Command } from "../App";
+import { Command } from "../models/command";
 import zdgLogo from "../assets/images/ZG512.png";
 
 export default function Welcome() {
