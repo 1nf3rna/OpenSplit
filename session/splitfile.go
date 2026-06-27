@@ -237,6 +237,7 @@ func deepCopySegments(list []Segment) []Segment {
 			Gold:     s.Gold,
 			Average:  s.Average,
 			PB:       s.PB,
+			Icon:     s.Icon,
 			Children: deepCopySegments(s.Children),
 		}
 	}

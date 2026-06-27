@@ -6,6 +6,7 @@ type Segment struct {
 	Gold     int64     `json:"gold"`
 	Average  int64     `json:"average"`
 	PB       int64     `json:"pb"`
+	Icon     string    `json:"icon,omitempty"` // base64 PNG
 	Children []Segment `json:"children"`
 }
 
