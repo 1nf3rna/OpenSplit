@@ -7,10 +7,10 @@ import Config from "./components/Config";
 import SplitEditor from "./components/editor/SplitEditor";
 import Splitter from "./components/splitter/Splitter";
 import Welcome from "./components/Welcome";
+import { Command } from "./models/command";
 import { ConfigPayload } from "./models/configPayload";
 import SessionPayload from "./models/sessionPayload";
 import SplitFilePayload from "./models/splitFilePayload";
-import { Command } from "./models/command";
 
 export enum AppView {
     Welcome = "welcome",

@@ -2,8 +2,8 @@ import React, { useEffect } from "react";
 
 import { Dispatch } from "../../../wailsjs/go/dispatcher/Service";
 import { EventsOn, WindowSetPosition, WindowSetSize } from "../../../wailsjs/runtime";
-import { Command } from "../../models/command";
 import { MenuItem, useContextMenu } from "../../hooks/useContextMenu";
+import { Command } from "../../models/command";
 import { ConfigPayload } from "../../models/configPayload";
 import SessionPayload from "../../models/sessionPayload";
 import { ContextMenu } from "../ContextMenu";
