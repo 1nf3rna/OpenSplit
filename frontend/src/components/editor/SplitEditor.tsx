@@ -11,7 +11,7 @@ import React, { useEffect, useState } from "react";
 import { Dispatch, ExportSplitFile } from "../../../wailsjs/go/dispatcher/Service";
 import { WindowCenter, WindowSetSize } from "../../../wailsjs/runtime";
 import { Command } from "../../App";
-import { GetAvailableSkins, SetSkin } from "../../../wailsjs/go/skin/Service";
+import { GetAvailableSkins } from "../../../wailsjs/go/skin/Service";
 import SegmentPayload from "../../models/segmentPayload";
 import SplitFilePayload from "../../models/splitFilePayload";
 import { IconButton } from "../Tooltip";
