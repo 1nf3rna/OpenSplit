@@ -176,6 +176,8 @@ func (s *Service) LoadConfig(c *config.Service) error {
 		return err
 	}
 
+	newConfig.EnsureDefaultKeyBindings()
+
 	s.configLock.Lock()
 	c.SpeedRunAPIBase = newConfig.SpeedRunAPIBase
 	c.KeyConfig = newConfig.KeyConfig

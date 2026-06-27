@@ -175,9 +175,12 @@ func (r *Running) Receive(c command.Command, payload *string) (dispatcher.Dispat
 		machine.sessionService.SetRuntimeOffsetOverride(
 			time.Duration(ms) * time.Millisecond,
 		)
-
 	case command.CLEAR_RUNTIME_OFFSET:
 		machine.sessionService.ClearRuntimeOffsetOverride()
+	case command.COMPARISON_LEFT:
+		machine.runtimeProvider.EventsEmit("comparison:left")
+	case command.COMPARISON_RIGHT:
+		machine.runtimeProvider.EventsEmit("comparison:right")
 	default:
 		logger.Warnf(logModule, "unhandled default case in Running: %d", c)
 	}

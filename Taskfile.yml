@@ -33,10 +33,10 @@ tasks:
                 : > "{{.FRONTEND_DIST}}/.gitkeep"
                 {{end}}
 
-
-
     dev:
         desc: Start Wails dev server
+        deps:
+            - generate-commands
         cmds:
             - |
                 {{if eq OS "windows"}}
@@ -49,6 +49,7 @@ tasks:
         desc: Production build
         deps:
             - ensure-dist
+            - generate-commands
         cmds:
             - |
                 {{if eq OS "windows"}}
@@ -197,5 +198,9 @@ tasks:
         vars:
             SRC_DIR: '{{.SRC_DIR | default ""}}'
         cmds:
-          - powershell -Command "Compress-Archive -Path '{{.SRC_DIR}}\\*' -DestinationPath '.\skin\default-skin.zip' -Force"
+            - powershell -Command "Compress-Archive -Path '{{.SRC_DIR}}\\*' -DestinationPath '.\skin\default-skin.zip' -Force"
 
+    generate-commands:
+        desc: Generate frontend command constants
+        cmds:
+            - go run ./tools/gencommands
