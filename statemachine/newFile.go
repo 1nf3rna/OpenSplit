@@ -60,6 +60,7 @@ func (n *NewFile) Receive(c command.Command, payload *string) (dispatcher.Dispat
 		if err != nil {
 			return dispatcher.DispatchReply{Code: 4, Message: "failed to save dto: " + err.Error()}, err
 		}
+		machine.skinProvider.SetSkin(dto.SelectedSkin, false)
 		sf, err := adapters.DTOSplitFileToDomain(dto)
 		if err != nil {
 			return dispatcher.DispatchReply{Code: 5, Message: err.Error()}, err
