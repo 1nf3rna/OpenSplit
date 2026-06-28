@@ -9,9 +9,11 @@ import {
 import React, { useEffect, useState } from "react";
 
 import { Dispatch, ExportSplitFile } from "../../../wailsjs/go/dispatcher/Service";
+import { GetAvailableSkins } from "../../../wailsjs/go/skin/Service";
 import { WindowCenter, WindowSetSize } from "../../../wailsjs/runtime";
 import { Command } from "../../App";
-import { GetAvailableSkins } from "../../../wailsjs/go/skin/Service";
+import addIcon from "../../assets/images/add.png";
+import removeIcon from "../../assets/images/remove.png";
 import SegmentPayload from "../../models/segmentPayload";
 import SplitFilePayload from "../../models/splitFilePayload";
 import { IconButton } from "../Tooltip";
@@ -399,38 +401,72 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
                                     gap: 8,
                                 }}
                             >
-                                {segment.icon && (
-                                    <img
-                                        src={segment.icon}
-                                        alt=""
-                                        style={{
-                                            width: 24,
-                                            height: 24,
-                                            objectFit: "contain",
-                                            border: "1px solid #666",
-                                            borderRadius: 2,
-                                        }}
-                                    />
-                                )}
-
                                 <input
+                                    id={`segment-icon-${segment.id}`}
                                     type="file"
                                     accept="image/*"
+                                    style={{ display: "none" }}
                                     onChange={(e) => updateSegmentIcon(segment.id, e)}
                                 />
 
-                                {segment.icon && (
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            updateSegment(segment.id, (s) => ({
-                                                ...s,
-                                                icon: "",
-                                            }))
-                                        }
-                                    >
-                                        Clear
-                                    </button>
+                                {!segment.icon ? (
+                                    <img
+                                        src={addIcon}
+                                        alt="Choose image"
+                                        title="Choose image"
+                                        onClick={() => document.getElementById(`segment-icon-${segment.id}`)?.click()}
+                                        style={{
+                                            width: 24,
+                                            height: 24,
+                                            cursor: "pointer",
+                                            backgroundColor: "#fff",
+                                            border: "1px solid #666",
+                                            borderRadius: 2,
+                                            padding: 2,
+                                            boxSizing: "border-box",
+                                        }}
+                                    />
+                                ) : (
+                                    <>
+                                        <img
+                                            src={segment.icon}
+                                            alt=""
+                                            title="Choose a different image"
+                                            onClick={() =>
+                                                document.getElementById(`segment-icon-${segment.id}`)?.click()
+                                            }
+                                            style={{
+                                                width: 24,
+                                                height: 24,
+                                                objectFit: "contain",
+                                                border: "1px solid #666",
+                                                borderRadius: 2,
+                                                cursor: "pointer",
+                                            }}
+                                        />
+
+                                        <img
+                                            src={removeIcon}
+                                            alt="Clear image"
+                                            title="Clear image"
+                                            onClick={() =>
+                                                updateSegment(segment.id, (s) => ({
+                                                    ...s,
+                                                    icon: "",
+                                                }))
+                                            }
+                                            style={{
+                                                width: 24,
+                                                height: 24,
+                                                cursor: "pointer",
+                                                backgroundColor: "#fff",
+                                                border: "1px solid #666",
+                                                borderRadius: 2,
+                                                padding: 2,
+                                                boxSizing: "border-box",
+                                            }}
+                                        />
+                                    </>
                                 )}
                             </div>
                         </td>
