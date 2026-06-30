@@ -4,7 +4,9 @@ import SegmentPayload from "./segmentPayload";
 export default class SplitFilePayload {
     id: string = "";
     game_name: string = "";
+    speedrun_game_id = "";
     game_category: string = "";
+    speedrun_game_category_id = "";
     version: number = 1;
 
     selected_skin?: string;

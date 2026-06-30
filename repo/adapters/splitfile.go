@@ -23,7 +23,9 @@ func DomainSplitFileToDTO(sf session.SplitFile) dto.SplitFile {
 	return dto.SplitFile{
 		ID:           sf.ID.String(),
 		GameName:     sf.GameName,
+		GameID:       sf.GameID,
 		GameCategory: sf.GameCategory,
+		CategoryID:   sf.CategoryID,
 		Version:      sf.Version,
 
 		SelectedSkin: sf.SelectedSkin,

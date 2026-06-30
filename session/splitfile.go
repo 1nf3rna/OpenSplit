@@ -11,7 +11,9 @@ import (
 type SplitFile struct {
 	ID           uuid.UUID
 	GameName     string
+	GameID       string
 	GameCategory string
+	CategoryID   string
 	Version      int
 
 	SelectedSkin string

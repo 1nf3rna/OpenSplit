@@ -19,7 +19,9 @@ type Split struct {
 type SplitFile struct {
 	ID           string `json:"id"`
 	GameName     string `json:"game_name"`
+	GameID       string `json:"speedrun_game_id"`
 	GameCategory string `json:"game_category"`
+	CategoryID   string `json:"speedrun_game_category_id"`
 	Version      int    `json:"version"`
 
 	SelectedSkin string `json:"selected_skin"`
