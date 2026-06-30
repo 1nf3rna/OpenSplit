@@ -29,6 +29,7 @@ import (
 	"github.com/zellydev-games/opensplit/repo"
 	"github.com/zellydev-games/opensplit/session"
 	"github.com/zellydev-games/opensplit/skin"
+	"github.com/zellydev-games/opensplit/speedrun"
 	"github.com/zellydev-games/opensplit/statemachine"
 	"github.com/zellydev-games/opensplit/timer"
 
@@ -60,6 +61,7 @@ func main() {
 	timerService, timerUpdateChannel := timer.NewStopwatch(timer.NewTicker(time.Millisecond * 20))
 	repoService := repo.NewService(jsonRepo)
 	configService, configUpdateChannel := config.NewService(splitFileDir, skinDir)
+	speedrunService := speedrun.NewService()
 
 	// Build out skin server
 	watcher := platform.NewDirChangeTracker()
@@ -120,6 +122,7 @@ func main() {
 			timerService.Startup(ctx)
 			runtimeProvider.Startup(ctx)
 			machine.Startup(ctx)
+			speedrunService.Startup()
 
 			// Start UI pumps
 			sessionUIBridge.StartUIPump()
@@ -157,6 +160,7 @@ func main() {
 		Bind: []interface{}{
 			commandDispatcher,
 			skinService,
+			speedrunService,
 		},
 	})
 

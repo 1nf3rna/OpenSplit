@@ -1,33 +1,37 @@
 @layer components {
-    div.autocomplete {
+    .autocomplete {
+        position: relative;
+        display: inline-block;
+        width: 100%;
+    }
+
+    .autocomplete-list {
         position: absolute;
-        background-color: #282828;
-        width: 50%;
-        z-index: 9999;
-        top: 150px;
-    }
+        top: calc(100% + 2px);
+        left: 0;
 
-    .autocomplete ul {
-        height: 200px;
-        overflow-y: scroll;
         margin: 0;
-        padding: 10px;
-    }
-
-    .autocomplete li {
-        background-color: #640199;
-        text-decoration: none;
+        padding: 0;
         list-style: none;
-        border: 3px solid #222;
-        border-collapse: collapse;
-        padding: 5px;
-        margin-bottom: 5px;
-        cursor: pointer;
-        border-radius: 3px;
+
+        background: #282828;
+        border: 1px solid #666;
+        border-radius: 4px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+
+        z-index: 9999;
+
+        max-height: 300px;
+        overflow-y: auto;
     }
 
-    .autocomplete li:hover {
-        border-color: #abd5e7;
+    .autocomplete-list li {
+        padding: 6px 10px;
+        cursor: pointer;
+    }
+
+    .autocomplete-list li:hover {
+        background: var(--accent);
     }
 
     div.autocomplete-item {
