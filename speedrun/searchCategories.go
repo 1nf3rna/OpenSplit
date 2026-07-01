@@ -42,7 +42,11 @@ func (s *Service) SearchCategories(gameID string) (CategorySearchResult, error) 
 	if err != nil {
 		return CategorySearchResult{}, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Printf("error closing response body: %v", err)
+		}
+	}()
 
 	fmt.Printf("Response Status: %s\n", resp.Status)
 	if resp.StatusCode != http.StatusOK {

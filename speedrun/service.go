@@ -28,19 +28,16 @@ func NewService() *Service {
 	}
 }
 
-func (s *Service) Startup() error {
+func (s *Service) Startup() {
 	platforms, err := s.fetchPlatforms()
 	if err != nil {
 		logger.Errorf(logModule, "failed to load speedrun platforms: %v", err)
-		return err
 	}
 
 	s.platforms = make(map[string]string, len(platforms.Data))
 	for _, p := range platforms.Data {
 		s.platforms[p.ID] = p.Name
 	}
-
-	return nil
 }
 
 func (s *Service) ToWorldRecord(result WRSearchResult) session.WorldRecord {

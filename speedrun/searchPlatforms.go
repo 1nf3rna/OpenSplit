@@ -25,38 +25,46 @@ func (s *Service) fetchPlatforms() (PlatformResult, error) {
 	var all PlatformResult
 
 	for offset := 0; ; offset += pageSize {
-		endpoint := fmt.Sprintf(
-			"%s/platforms?max=%d&offset=%d",
-			s.baseURL,
-			pageSize,
-			offset,
-		)
-		log.Println(endpoint)
-
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
-		if err != nil {
-			return PlatformResult{}, err
-		}
-
-		req.Header.Set("Accept", "application/json")
-		req.Header.Set("User-Agent", "Go-HTTPS-Client-Example")
-
-		resp, err := s.client.Do(req)
-		if err != nil {
-			return PlatformResult{}, err
-		}
-		defer resp.Body.Close()
-
-		fmt.Printf("Response Status: %s\n", resp.Status)
-		if resp.StatusCode != http.StatusOK {
-			return PlatformResult{}, fmt.Errorf("unexpected status: %s", resp.Status)
-		}
-
 		var page PlatformResult
-		if err := json.NewDecoder(resp.Body).Decode(&page); err != nil {
+
+		err := func() error {
+			endpoint := fmt.Sprintf(
+				"%s/platforms?max=%d&offset=%d",
+				s.baseURL,
+				pageSize,
+				offset,
+			)
+			log.Println(endpoint)
+
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+
+			req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+			if err != nil {
+				return err
+			}
+
+			req.Header.Set("Accept", "application/json")
+			req.Header.Set("User-Agent", "Go-HTTPS-Client-Example")
+
+			resp, err := s.client.Do(req)
+			if err != nil {
+				return err
+			}
+			defer func() {
+				if err := resp.Body.Close(); err != nil {
+					log.Printf("error closing response body: %v", err)
+				}
+			}()
+
+			fmt.Printf("Response Status: %s\n", resp.Status)
+			if resp.StatusCode != http.StatusOK {
+				return fmt.Errorf("unexpected status: %s", resp.Status)
+			}
+
+			return json.NewDecoder(resp.Body).Decode(&page)
+		}()
+		if err != nil {
 			return PlatformResult{}, err
 		}
 
