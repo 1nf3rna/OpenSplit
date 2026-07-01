@@ -39,7 +39,11 @@ export enum AppView {
 
 export type AppViewModel =
     | { view: AppView.Welcome }
-    | { view: AppView.NewSplitFile; speedrunApiBaseUrl: string }
+    | {
+          view: AppView.NewSplitFile;
+          speedrunApiBaseUrl: string;
+          splitFile?: SplitFilePayload | null;
+      }
     | { view: AppView.EditSplitFile; splitFile: SplitFilePayload | null; speedrunApiBaseUrl: string }
     | { view: AppView.Running; session: SessionPayload; config: ConfigPayload }
     | { view: AppView.Settings; config: ConfigPayload };
@@ -52,7 +56,9 @@ function ViewRouter({ model }: ViewRouterProps) {
             return <Welcome />;
 
         case AppView.NewSplitFile:
-            return <SplitEditor splitFilePayload={null} speedRunAPIBase={model.speedrunApiBaseUrl} />;
+            return (
+                <SplitEditor splitFilePayload={model.splitFile ?? null} speedRunAPIBase={model.speedrunApiBaseUrl} />
+            );
 
         case AppView.EditSplitFile:
             return <SplitEditor splitFilePayload={model.splitFile} speedRunAPIBase={model.speedrunApiBaseUrl} />;

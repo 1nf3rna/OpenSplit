@@ -43,6 +43,15 @@ func (w *Welcome) Receive(c command.Command, _ *string) (dispatcher.DispatchRepl
 		if err != nil {
 			return dispatcher.DispatchReply{Code: 1, Message: "failed to load dto: " + err.Error()}, err
 		}
+		if sf.SelectedSkin != "" {
+			if err := machine.skinProvider.SetSkin(sf.SelectedSkin, false); err != nil {
+				logger.Errorf(logModule, "failed to set skin: %v", err)
+			}
+		} else {
+			if err := machine.skinProvider.SetSkin(machine.configService.SelectedSkin, false); err != nil {
+				logger.Errorf(logModule, "failed to set skin: %v", err)
+			}
+		}
 		domainSF, err := adapters.DTOSplitFileToDomain(sf)
 		if err != nil {
 			return dispatcher.DispatchReply{Code: 2, Message: "failed to convert dto: " + err.Error()}, err

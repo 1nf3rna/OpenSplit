@@ -61,12 +61,12 @@ func main() {
 	repoService := repo.NewService(jsonRepo)
 	configService, configUpdateChannel := config.NewService(splitFileDir, skinDir)
 
-	sessionService, sessionUpdateChannel := session.NewService(timerService)
-	machine := statemachine.NewMachine(runtimeProvider, repoService, sessionService, configService)
-
 	// Build out skin server
 	watcher := platform.NewDirChangeTracker()
 	skinService, skinUpdatedCh := skin.NewService(skinDir, configService, repoService, watcher)
+
+	sessionService, sessionUpdateChannel := session.NewService(timerService)
+	machine := statemachine.NewMachine(runtimeProvider, repoService, sessionService, configService, skinService)
 
 	// Build UI bridges with model update channels
 	timerUIBridge := bridge.NewTimer(timerUpdateChannel, runtimeProvider)

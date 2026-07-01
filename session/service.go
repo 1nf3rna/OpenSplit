@@ -38,7 +38,7 @@ type Timer interface {
 	Run()
 	Start()
 	Pause()
-	Reset()
+	Reset(offset *time.Duration)
 	GetCurrentTime() time.Duration
 	SubtractTime(duration time.Duration)
 }
@@ -69,6 +69,7 @@ type Run struct {
 	Splits           map[uuid.UUID]Split // uuid key here is a segment ID
 	LeafSegments     []Segment
 	Completed        bool
+	ForceFinished    bool
 	SplitFileVersion int
 }
 
@@ -78,16 +79,17 @@ type Run struct {
 // current Run / SplitFile, and communicates timer updates to the frontend
 // If there's one struct that's key to understand in OpenSplit, it's this one.
 type Service struct {
-	mu                   sync.Mutex
-	timer                Timer
-	loadedSplitFile      *SplitFile
-	leafSegments         []*Segment
-	currentRun           *Run
-	currentSegmentIndex  int
-	sessionState         State
-	lastSplitTime        time.Time
-	dirty                bool
-	sessionUpdateChannel chan *Service
+	mu                    sync.Mutex
+	timer                 Timer
+	loadedSplitFile       *SplitFile
+	leafSegments          []*Segment
+	currentRun            *Run
+	currentSegmentIndex   int
+	sessionState          State
+	lastSplitTime         time.Time
+	dirty                 bool
+	runtimeOffsetOverride *time.Duration
+	sessionUpdateChannel  chan *Service
 }
 
 // NewService creates a new Service from the passed in components.
@@ -120,11 +122,20 @@ func (s *Service) UpdateWindowDimensions(x, y, w, h int) {
 
 func (s *Service) SetLoadedSplitFile(sf SplitFile) {
 	logger.Debugf(logModule, "setting loaded splitfile to %s", sf.GameName)
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	defer s.sendUpdate()
 
 	s.loadedSplitFile = &sf
+	s.timer.Reset(&sf.Offset)
+
+	logger.Infof(
+		logModule,
+		"loaded splitfile offset=%d",
+		sf.Offset.Milliseconds(),
+	)
+
 	s.leafSegments = getLeafSegments(sf.Segments, nil)
 
 	s.currentRun = nil
@@ -134,6 +145,43 @@ func (s *Service) SetLoadedSplitFile(sf SplitFile) {
 	s.loadedSplitFile.BuildStats()
 	logger.Infof(logModule, "%s loaded in session (segments total/leaf %d/%d)",
 		sf.GameName, len(sf.Segments), len(s.leafSegments))
+}
+
+// SetRuntimeOffsetOverride replaces the configured splitfile offset
+// for the current session only.
+func (s *Service) SetRuntimeOffsetOverride(offset time.Duration) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.runtimeOffsetOverride = &offset
+
+	logger.Infof(
+		logModule,
+		"runtime offset override set to %dms",
+		offset.Milliseconds(),
+	)
+}
+
+// ClearRuntimeOffsetOverride removes the runtime-only offset override.
+func (s *Service) ClearRuntimeOffsetOverride() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.runtimeOffsetOverride = nil
+
+	logger.Info(logModule, "runtime offset override cleared")
+}
+
+func (s *Service) effectiveOffset() time.Duration {
+	if s.runtimeOffsetOverride != nil {
+		return *s.runtimeOffsetOverride
+	}
+
+	if s.loadedSplitFile == nil {
+		return 0
+	}
+
+	return s.loadedSplitFile.Offset
 }
 
 // Split starts, advances, finishes, or resets a run depending on the state
@@ -217,6 +265,66 @@ func (s *Service) Undo() {
 	}
 }
 
+// Finish force-completes the current run regardless of remaining splits.
+func (s *Service) Done() SplitResult {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	defer s.sendUpdate()
+
+	if s.sessionState != Running || s.currentRun == nil {
+		return SplitNoop
+	}
+
+	now := s.timer.GetCurrentTime()
+
+	s.timer.Pause()
+
+	s.sessionState = Finished
+	s.currentRun.TotalTime = now
+	s.currentRun.Completed = true
+	s.currentRun.ForceFinished = true
+
+	s.PersistRunToSession()
+
+	logger.Infof(logModule, "run force-finished at %d", now.Milliseconds())
+
+	return SplitFinished
+}
+
+// Unfinish reopens a force-finished run and resumes timing.
+func (s *Service) UnDone() SplitResult {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	defer s.sendUpdate()
+
+	if s.sessionState != Finished || s.currentRun == nil {
+		return SplitNoop
+	}
+
+	if !s.currentRun.ForceFinished {
+		logger.Warn(logModule, "Unfinish called on naturally completed run")
+		return SplitNoop
+	}
+
+	s.currentRun.Completed = false
+	s.currentRun.ForceFinished = false
+
+	// Remove persisted run from history if it was appended
+	if len(s.loadedSplitFile.Runs) > 0 {
+		last := s.loadedSplitFile.Runs[len(s.loadedSplitFile.Runs)-1]
+		if last.ID == s.currentRun.ID {
+			s.loadedSplitFile.Runs = s.loadedSplitFile.Runs[:len(s.loadedSplitFile.Runs)-1]
+		}
+	}
+
+	s.sessionState = Running
+	s.timer.Start()
+
+	logger.Info(logModule, "force-finished run restored")
+
+	return SplitAdvanced
+}
+
 // Skip sets the current segment to the next one without recording a split
 func (s *Service) Skip() {
 	s.mu.Lock()
@@ -269,6 +377,7 @@ func (s *Service) Reset() {
 func (s *Service) CloseRun() {
 	s.mu.Lock()
 	s.currentRun = nil
+	s.runtimeOffsetOverride = nil
 	s.mu.Unlock()
 	logger.Info(logModule, "run closed, resetting session")
 	s.resetLocked()
@@ -317,8 +426,16 @@ func (s *Service) Run() (Run, bool) {
 // resetLocked assumes that the system is under lock when called.
 func (s *Service) resetLocked() {
 	s.timer.Pause()
-	s.timer.Reset()
+	logger.Infof(
+		logModule,
+		"resetLocked runtimeOffset=%v effectiveOffset=%d",
+		s.runtimeOffsetOverride,
+		s.effectiveOffset().Milliseconds(),
+	)
+	offset := s.effectiveOffset()
+	s.timer.Reset(&offset)
 
+	// s.runtimeOffsetOverride = nil
 	s.currentRun = nil
 	s.sessionState = Idle
 	s.currentSegmentIndex = -1
@@ -356,7 +473,8 @@ func (s *Service) startNewRun() SplitResult {
 		return SplitNoop
 	}
 
-	s.timer.SubtractTime(s.loadedSplitFile.Offset)
+	// s.timer.SubtractTime(s.effectiveOffset())
+	// s.timer.SubtractTime(s.loadedSplitFile.Offset)
 	s.timer.Start()
 	s.loadedSplitFile.Attempts++
 	s.sessionState = Running

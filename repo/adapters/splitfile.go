@@ -25,17 +25,22 @@ func DomainSplitFileToDTO(sf session.SplitFile) dto.SplitFile {
 		GameName:     sf.GameName,
 		GameCategory: sf.GameCategory,
 		Version:      sf.Version,
-		Segments:     domainSegmentsToDTO(sf.Segments),
-		Runs:         domainRunsToDTO(sf.Runs, sf.ID, sf.Version),
-		PB:           PB,
-		SOB:          sf.SOB.Milliseconds(),
+
+		SelectedSkin: sf.SelectedSkin,
+
+		Segments: domainSegmentsToDTO(sf.Segments),
+		Runs:     domainRunsToDTO(sf.Runs, sf.ID, sf.Version),
+		PB:       PB,
+
+		SOB:      sf.SOB.Milliseconds(),
+		Attempts: sf.Attempts,
+		Offset:   sf.Offset.Milliseconds(),
+		Platform: sf.Platform,
+
 		WindowX:      sf.WindowX,
 		WindowY:      sf.WindowY,
 		WindowWidth:  sf.WindowWidth,
 		WindowHeight: sf.WindowHeight,
-		Attempts:     sf.Attempts,
-		Offset:       sf.Offset.Milliseconds(),
-		Platform:     sf.Platform,
 	}
 }
 
@@ -74,20 +79,26 @@ func DTOSplitFileToDomain(payload dto.SplitFile) (session.SplitFile, error) {
 	}
 
 	newSplitFile.ID = id
-	newSplitFile.Version = payload.Version
-	newSplitFile.Attempts = payload.Attempts
 	newSplitFile.GameName = payload.GameName
 	newSplitFile.GameCategory = payload.GameCategory
+	newSplitFile.Version = payload.Version
+
+	newSplitFile.SelectedSkin = payload.SelectedSkin
+
 	newSplitFile.Segments = dtoSegmentsToDomain(payload.Segments)
-	newSplitFile.SOB = time.Duration(payload.SOB) * time.Millisecond
-	newSplitFile.WindowWidth = payload.WindowWidth
-	newSplitFile.WindowHeight = payload.WindowHeight
-	newSplitFile.WindowX = payload.WindowX
-	newSplitFile.WindowY = payload.WindowY
 	newSplitFile.Runs = dtoRunsToDomain(fixedRuns)
 	newSplitFile.PB = PB
+
+	newSplitFile.SOB = time.Duration(payload.SOB) * time.Millisecond
+	newSplitFile.Attempts = payload.Attempts
 	newSplitFile.Offset = time.Duration(payload.Offset) * time.Millisecond
 	newSplitFile.Platform = payload.Platform
+
+	newSplitFile.WindowX = payload.WindowX
+	newSplitFile.WindowY = payload.WindowY
+	newSplitFile.WindowHeight = payload.WindowHeight
+	newSplitFile.WindowWidth = payload.WindowWidth
+
 	return newSplitFile, nil
 }
 

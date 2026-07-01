@@ -3,20 +3,25 @@ import SegmentPayload from "./segmentPayload";
 
 export default class SplitFilePayload {
     id: string = "";
-    version: number = 1;
-    attempts: number = 0;
     game_name: string = "";
     game_category: string = "";
+    version: number = 1;
+
+    selected_skin?: string;
+
+    segments: SegmentPayload[] = [];
+    runs: RunPayload[] = [];
+    pb: RunPayload | null = null;
+
+    sob: number = 0;
+    attempts: number = 0;
+    offset: number = 0;
+    platform: string = "SNES";
+
     window_x: number = 100;
     window_y: number = 100;
     window_height: number = 550;
     window_width: number = 350;
-    runs: RunPayload[] = [];
-    segments: SegmentPayload[] = [];
-    sob: number = 0;
-    pb: RunPayload | null = null;
-    offset: number = 0;
-    platform: string = "SNES";
 
     constructor(init?: Partial<SplitFilePayload>) {
         if (init) {

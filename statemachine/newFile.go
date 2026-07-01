@@ -4,6 +4,7 @@ import (
 	"github.com/zellydev-games/opensplit/bridge"
 	"github.com/zellydev-games/opensplit/command"
 	"github.com/zellydev-games/opensplit/dispatcher"
+	"github.com/zellydev-games/opensplit/dto"
 	"github.com/zellydev-games/opensplit/logger"
 	"github.com/zellydev-games/opensplit/repo/adapters"
 )
@@ -29,10 +30,16 @@ func (n *NewFile) OnEnter() error {
 	bridge.EmitUIEvent(machine.runtimeProvider, bridge.AppViewModel{
 		View:               bridge.AppViewNewSplitFile,
 		SpeedrunAPIBaseURL: machine.configService.SpeedRunAPIBase,
+		SplitFile: &dto.SplitFile{
+			SelectedSkin: machine.configService.SelectedSkin,
+		},
 	})
+
 	return nil
 }
+
 func (n *NewFile) OnExit() error { return nil }
+
 func (n *NewFile) Receive(c command.Command, payload *string) (dispatcher.DispatchReply, error) {
 	switch c {
 	case command.CANCEL:
@@ -53,6 +60,7 @@ func (n *NewFile) Receive(c command.Command, payload *string) (dispatcher.Dispat
 		if err != nil {
 			return dispatcher.DispatchReply{Code: 4, Message: "failed to save dto: " + err.Error()}, err
 		}
+		machine.skinProvider.SetSkin(dto.SelectedSkin, false)
 		sf, err := adapters.DTOSplitFileToDomain(dto)
 		if err != nil {
 			return dispatcher.DispatchReply{Code: 5, Message: err.Error()}, err

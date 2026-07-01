@@ -28,6 +28,10 @@ import (
 //go:embed default-skin.zip
 var DefaultSkinZip []byte
 
+type SkinProvider interface {
+	SetSkin(string, bool) error
+}
+
 const logModule = "skins"
 const EntryPoint = "index.css"
 

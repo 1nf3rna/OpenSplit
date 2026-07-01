@@ -15,6 +15,7 @@ import (
 	"github.com/zellydev-games/opensplit/repo"
 	"github.com/zellydev-games/opensplit/repo/adapters"
 	"github.com/zellydev-games/opensplit/session"
+	"github.com/zellydev-games/opensplit/skin"
 )
 
 const logModule = "statemachine"
@@ -67,6 +68,7 @@ type Service struct {
 	splitfileLock                         sync.Mutex
 	currentState                          state
 	sessionService                        *session.Service
+	skinProvider                          skin.SkinProvider
 	repoService                           *repo.Service
 	runtimeProvider                       RuntimeProvider
 	hotkeyProvider                        HotkeyProvider
@@ -77,12 +79,13 @@ type Service struct {
 }
 
 // NewMachine sets the global singleton, and gives it a friendly default state
-func NewMachine(runtimeProvider RuntimeProvider, repoService *repo.Service, sessionService *session.Service, configService *config.Service) *Service {
+func NewMachine(runtimeProvider RuntimeProvider, repoService *repo.Service, sessionService *session.Service, configService *config.Service, skinProvider skin.SkinProvider) *Service {
 	machine = &Service{
 		sessionService:  sessionService,
 		runtimeProvider: runtimeProvider,
 		repoService:     repoService,
 		configService:   configService,
+		skinProvider:    skinProvider,
 	}
 	return machine
 }

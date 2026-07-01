@@ -194,15 +194,12 @@ export default function SegmentList({ sessionPayload, comparison }: SplitListPar
 
     useEffect(() => {
         let className = "";
-        if (sessionPayload.loaded_split_file &&
-            sessionPayload.current_run &&
-            sessionPayload.leaf_segments) {
-            if(Object.keys(sessionPayload.current_run.splits).length
-                == sessionPayload.leaf_segments.length) {
+        if (sessionPayload.loaded_split_file && sessionPayload.current_run && sessionPayload.leaf_segments) {
+            if (Object.keys(sessionPayload.current_run.splits).length == sessionPayload.leaf_segments.length) {
                 className = "complete";
 
                 const pb = sessionPayload.loaded_split_file.pb;
-                console.log(sessionPayload.loaded_split_file)
+                console.log(sessionPayload.loaded_split_file);
                 if (pb) {
                     const segments = sessionPayload.leaf_segments;
                     if (segments) {
@@ -218,7 +215,6 @@ export default function SegmentList({ sessionPayload, comparison }: SplitListPar
         } else {
             setCompleteClassName("");
         }
-
     }, [sessionPayload]);
 
     const targets = useMemo<Targets>(() => {
@@ -402,12 +398,15 @@ export default function SegmentList({ sessionPayload, comparison }: SplitListPar
 
                 main.push(
                     <tr key={segmentData.Segment.id} className="parentRow">
-                        <td className={"splitName " + completeClassName} style={{ paddingLeft: segmentData.Depth * 16 }}>
+                        <td
+                            className={"splitName " + completeClassName}
+                            style={{ paddingLeft: segmentData.Depth * 16 }}
+                        >
                             {toggle}
                             <strong>{segmentData.Segment.name}</strong>
                         </td>
                         <td className={"splitDelta " + completeClassName}>{parentDelta}</td>
-                        <td className={"splitComparison "+ completeClassName}>{parentComparison}</td>
+                        <td className={"splitComparison " + completeClassName}>{parentComparison}</td>
                     </tr>,
                 );
                 continue;
@@ -463,7 +462,9 @@ export default function SegmentList({ sessionPayload, comparison }: SplitListPar
                 <h2 id="gameCategory" className={completeClassName}>
                     <small>{sessionPayload.loaded_split_file?.game_category}</small>
                 </h2>
-                <div id="attempts" className={completeClassName}>{sessionPayload.loaded_split_file?.attempts}</div>
+                <div id="attempts" className={completeClassName}>
+                    {sessionPayload.loaded_split_file?.attempts}
+                </div>
             </div>
 
             <div id="splitBody" className={completeClassName}>

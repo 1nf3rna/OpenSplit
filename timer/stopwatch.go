@@ -81,9 +81,22 @@ func (s *Stopwatch) Run() {
 func (s *Stopwatch) Start() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
 	if !s.running {
-		// mark base time relative to now
+		logger.Infof(
+			logModule,
+			"start currentTime=%d",
+			s.currentTime.Milliseconds(),
+		)
+
 		s.startTime = time.Now().Add(-s.currentTime)
+
+		logger.Infof(
+			logModule,
+			"start startTime=%v",
+			s.startTime,
+		)
+
 		s.running = true
 	}
 }
@@ -98,16 +111,34 @@ func (s *Stopwatch) Pause() {
 	}
 }
 
-// Reset sets the running state to false, stopping the ticker updates from accumulating then sets the current time to 0.
-func (s *Stopwatch) Reset() {
+// Reset sets the running state to false, stopping the ticker updates from accumulating then sets the current time to currentTime.
+func (s *Stopwatch) Reset(offset *time.Duration) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
 	s.running = false
-	s.currentTime = 0
-	select {
-	case s.timeUpdatedChannel <- 0:
-	default:
+
+	if offset != nil {
+		s.currentTime = *offset
+	} else {
+		s.currentTime = 0
 	}
+
+	logger.Infof(logModule,
+		"reset currentTime=%d",
+		s.currentTime.Milliseconds(),
+	)
+
+	select {
+	case s.timeUpdatedChannel <- s.currentTime:
+		logger.Infof(logModule,
+			"sent timer update=%d",
+			s.currentTime.Milliseconds(),
+		)
+	default:
+		logger.Warn(logModule, "timer update dropped")
+	}
+
 }
 
 // GetCurrentTime allows public read access to the currentTime
@@ -118,6 +149,9 @@ func (s *Stopwatch) GetCurrentTime() time.Duration {
 }
 
 func (s *Stopwatch) SubtractTime(duration time.Duration) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	s.currentTime -= duration
 }
 
@@ -175,6 +209,12 @@ func (s *Stopwatch) tickOnce(now time.Time) {
 	s.mu.Lock()
 	if s.running {
 		s.currentTime = now.Sub(s.startTime)
+
+		logger.Infof(
+			logModule,
+			"tick currentTime=%d",
+			s.currentTime.Milliseconds(),
+		)
 		s.mu.Unlock()
 		select {
 		case s.timeUpdatedChannel <- s.currentTime:
