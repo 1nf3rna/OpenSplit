@@ -10,9 +10,7 @@ import React, { useEffect, useState } from "react";
 
 import { Dispatch, ExportSplitFile } from "../../../wailsjs/go/dispatcher/Service";
 import { GetAvailableSkins } from "../../../wailsjs/go/skin/Service";
-import { SearchGames } from "../../../wailsjs/go/speedrun/Service";
-import { SearchCategories } from "../../../wailsjs/go/speedrun/Service";
-import { Platforms } from "../../../wailsjs/go/speedrun/Service";
+import { Platforms, SearchCategories, SearchGames } from "../../../wailsjs/go/speedrun/Service";
 import { WindowCenter, WindowSetSize } from "../../../wailsjs/runtime";
 import { Command } from "../../App";
 import { useClickOutside } from "../../hooks/useClickOutside";
