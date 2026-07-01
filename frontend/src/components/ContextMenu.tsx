@@ -1,18 +1,33 @@
-import React from "react";
+import React, { useLayoutEffect, useRef, useState } from "react";
 
 import { ContextMenuProps, MenuAction, MenuSeparator } from "../hooks/useContextMenu";
 
-export function ContextMenu({ state, close, items = [] }: ContextMenuProps) {
-    if (!state.open) return null;
+const MENU_MARGIN = 8;
+const MIN_MENU_HEIGHT = 220;
 
-    // clamp position to screen based on width/height estimates
-    const vw = typeof window !== "undefined" ? window.innerWidth : 1000;
-    const vh = typeof window !== "undefined" ? window.innerHeight : 800;
-    const MENU_W = 200;
-    const MENU_H = Math.min(320, items.length * 36 + 12);
-    const margin = 8;
-    const left = Math.max(margin, Math.min(state.x, vw - MENU_W - margin));
-    const top = Math.max(margin, Math.min(state.y, vh - MENU_H - margin));
+export function ContextMenu({ state, close, items = [] }: ContextMenuProps) {
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [position, setPosition] = useState({
+        left: state.x,
+        top: state.y,
+    });
+
+    useLayoutEffect(() => {
+        if (!state.open || !containerRef.current) return;
+
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+
+        const menuWidth = 200;
+        const menuHeight = Math.max(MIN_MENU_HEIGHT, containerRef.current.offsetHeight);
+
+        setPosition({
+            left: Math.max(MENU_MARGIN, Math.min(state.x, vw - menuWidth - MENU_MARGIN)),
+            top: Math.max(MENU_MARGIN, Math.min(state.y, vh - menuHeight - MENU_MARGIN)),
+        });
+    }, [state.open, state.x, state.y, items]);
+
+    if (!state.open) return null;
 
     const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
         e.stopPropagation();
@@ -20,6 +35,7 @@ export function ContextMenu({ state, close, items = [] }: ContextMenuProps) {
     };
 
     const handleOverlayContextMenu = (e: React.MouseEvent<HTMLDivElement>) => {
+        e.preventDefault();
         e.stopPropagation();
         close();
     };
@@ -30,12 +46,21 @@ export function ContextMenu({ state, close, items = [] }: ContextMenuProps) {
 
     return (
         <div
-            className={"cm-overlay"}
+            className="cm-overlay"
             onClick={handleOverlayClick}
             onContextMenu={handleOverlayContextMenu}
-            role={"presentation"}
+            role="presentation"
         >
-            <div className={"cm-container"} style={{ left, top }} onClick={stopPropagation}>
+            <div
+                ref={containerRef}
+                className="cm-container"
+                style={{
+                    left: position.left,
+                    top: position.top,
+                    minHeight: MIN_MENU_HEIGHT,
+                }}
+                onClick={stopPropagation}
+            >
                 <div className="cm-panel" role="menu" aria-label="Context menu">
                     <ul className="cm-list">
                         {items.map((it, i) => {
@@ -48,7 +73,9 @@ export function ContextMenu({ state, close, items = [] }: ContextMenuProps) {
 
                             const onItemClick = (e: React.MouseEvent<HTMLButtonElement>) => {
                                 e.stopPropagation();
+
                                 if (disabled) return;
+
                                 item.onClick?.();
                                 close();
                             };
