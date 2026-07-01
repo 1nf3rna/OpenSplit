@@ -250,6 +250,14 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
         setSegments((prev) => deleteRecursive(prev));
     };
 
+    const emptyWR = {
+        show: false,
+        run_id: "",
+        players: [],
+        real_time: 0,
+        in_game_time: 0,
+    };
+
     const saveSplitFile = async (e: React.MouseEvent<HTMLButtonElement>) => {
         e.preventDefault();
 
@@ -271,6 +279,8 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
             attempts: Number(attempts),
             offset: offsetText === "" || offsetText === "-" ? 0 : parseInt(offsetText, 10),
             platform: platform,
+
+            wr: splitFilePayload?.wr ?? emptyWR,
 
             window_x: splitFilePayload?.window_x ?? 100,
             window_y: splitFilePayload?.window_y ?? 100,

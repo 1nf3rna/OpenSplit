@@ -10,9 +10,6 @@ import (
 	"time"
 )
 
-// example:
-// {"data":{"id":"o7e25xew","name":"Web","released":10000,"links":[{"rel":"self","uri":"https://www.speedrun.com/api/v1/platforms/o7e25xew"},{"rel":"games","uri":"https://www.speedrun.com/api/v1/games?platform=o7e25xew"},{"rel":"runs","uri":"https://www.speedrun.com/api/v1/runs?platform=o7e25xew"}]}}
-
 type PlatformResult struct {
 	Data []Platforms `json:"data"`
 }

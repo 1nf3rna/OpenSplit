@@ -60,6 +60,7 @@ func (e *Editing) Receive(c command.Command, payload *string) (dispatcher.Dispat
 			return dispatcher.DispatchReply{Code: 5, Message: err.Error()}, err
 		}
 		machine.sessionService.SetLoadedSplitFile(sf)
+		go machine.updateWorldRecord()
 		machine.changeState(RUNNING)
 		return dispatcher.DispatchReply{}, nil
 	default:

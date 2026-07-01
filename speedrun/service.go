@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/zellydev-games/opensplit/logger"
+	"github.com/zellydev-games/opensplit/session"
 )
 
 const logModule = "main"
@@ -40,4 +41,29 @@ func (s *Service) Startup() error {
 	}
 
 	return nil
+}
+
+func (s *Service) ToWorldRecord(result WRSearchResult) session.WorldRecord {
+	if len(result.Data) == 0 {
+		return session.WorldRecord{}
+	}
+
+	if len(result.Data[0].Runs) == 0 {
+		return session.WorldRecord{}
+	}
+
+	players := make([]string, 0, len(result.Data[0].Players.Data))
+	for _, p := range result.Data[0].Players.Data {
+		players = append(players, p.Names.International)
+	}
+
+	run := result.Data[0].Runs[0].Run
+
+	return session.WorldRecord{
+		Show:       true,
+		RunID:      run.ID,
+		Players:    players,
+		RealTime:   run.Time.RealTime,
+		InGameTime: run.Time.InGame,
+	}
 }

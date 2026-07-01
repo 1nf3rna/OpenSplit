@@ -1,5 +1,6 @@
 import RunPayload from "./runPayload";
 import SegmentPayload from "./segmentPayload";
+import WorldRecord from "./worldRecord";
 
 export default class SplitFilePayload {
     id: string = "";
@@ -19,6 +20,8 @@ export default class SplitFilePayload {
     attempts: number = 0;
     offset: number = 0;
     platform: string = "SNES";
+
+    wr: WorldRecord = new WorldRecord();
 
     window_x: number = 100;
     window_y: number = 100;

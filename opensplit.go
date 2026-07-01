@@ -68,7 +68,7 @@ func main() {
 	skinService, skinUpdatedCh := skin.NewService(skinDir, configService, repoService, watcher)
 
 	sessionService, sessionUpdateChannel := session.NewService(timerService)
-	machine := statemachine.NewMachine(runtimeProvider, repoService, sessionService, configService, skinService)
+	machine := statemachine.NewMachine(runtimeProvider, repoService, sessionService, configService, skinService, speedrunService)
 
 	// Build UI bridges with model update channels
 	timerUIBridge := bridge.NewTimer(timerUpdateChannel, runtimeProvider)

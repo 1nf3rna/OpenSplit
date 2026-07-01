@@ -27,6 +27,7 @@ export enum Command {
     PAUSE,
     TOGGLEGLOBAL,
     FOCUS,
+    TOGGLEWR,
 }
 
 export enum AppView {
