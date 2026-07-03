@@ -9,9 +9,9 @@ import {
 import React, { useEffect, useState } from "react";
 
 import { Dispatch, ExportSplitFile } from "../../../wailsjs/go/dispatcher/Service";
+import { GetAvailableSkins } from "../../../wailsjs/go/skin/Service";
 import { WindowCenter, WindowSetSize } from "../../../wailsjs/runtime";
 import { Command } from "../../App";
-import { GetAvailableSkins, SetSkin } from "../../../wailsjs/go/skin/Service";
 import SegmentPayload from "../../models/segmentPayload";
 import SplitFilePayload from "../../models/splitFilePayload";
 import { IconButton } from "../Tooltip";
@@ -87,6 +87,10 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
     const [selectedSkin, setSelectedSkin] = useState(splitFilePayload?.selected_skin ?? "");
 
     useEffect(() => {
+        setSegments(cloneSegments(splitFilePayload?.segments ?? []));
+    }, [splitFilePayload]);
+
+    useEffect(() => {
         setOffsetText(String(splitFilePayload?.offset ?? 0));
     }, [splitFilePayload]);
 
@@ -155,6 +159,66 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
         setSegments((prev) => updateRecursive(prev));
     }
 
+    function updateSegmentAverage(id: string, average: number) {
+        function updateRecursive(list: SegmentPayload[]): SegmentPayload[] {
+            return list.map((item) => {
+                if (item.id === id) {
+                    return {
+                        ...item,
+                        average,
+                    };
+                }
+
+                return {
+                    ...item,
+                    children: updateRecursive(item.children ?? []),
+                };
+            });
+        }
+
+        setSegments((prev) => updateRecursive(prev));
+    }
+
+    function updateSegmentPB(id: string, pb: number) {
+        function updateRecursive(list: SegmentPayload[]): SegmentPayload[] {
+            return list.map((item) => {
+                if (item.id === id) {
+                    return {
+                        ...item,
+                        pb,
+                    };
+                }
+
+                return {
+                    ...item,
+                    children: updateRecursive(item.children ?? []),
+                };
+            });
+        }
+
+        setSegments((prev) => updateRecursive(prev));
+    }
+
+    function updateSegmentGold(id: string, gold: number) {
+        function updateRecursive(list: SegmentPayload[]): SegmentPayload[] {
+            return list.map((item) => {
+                if (item.id === id) {
+                    return {
+                        ...item,
+                        gold,
+                    };
+                }
+
+                return {
+                    ...item,
+                    children: updateRecursive(item.children ?? []),
+                };
+            });
+        }
+
+        setSegments((prev) => updateRecursive(prev));
+    }
+
     const deleteSegment = (id: string) => {
         function deleteRecursive(list: SegmentPayload[]): SegmentPayload[] {
             return list
@@ -171,11 +235,12 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
     const saveSplitFile = async (e: React.MouseEvent<HTMLButtonElement>) => {
         e.preventDefault();
 
+        console.log(JSON.stringify(segments, null, 2));
         const newSplitFilePayload = SplitFilePayload.createFrom({
             id: splitFilePayload?.id ?? "",
             game_name: gameName,
             game_category: gameCategory,
-            version: splitFilePayload?.version ?? 0,
+            version: splitFilePayload?.version,
 
             selected_skin: selectedSkin,
 
@@ -194,6 +259,7 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
             window_width: splitFilePayload?.window_width ?? 350,
         });
 
+        console.log(JSON.stringify(newSplitFilePayload.segments, null, 2));
         const payload = JSON.stringify(newSplitFilePayload);
         await Dispatch(Command.SUBMIT, payload);
     };
@@ -285,12 +351,14 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
         depth: number,
         inheritedGroup: GroupCtx | null,
         isDirectChild: boolean,
+        totals: { avg: number; pb: number; gold: number },
     ) {
-        let totalAvg = 0;
-        let totalBest = 0;
-
         return list.map((segment, i) => {
             const hasChildren = (segment.children ?? []).length > 0;
+
+            const displayAvg = !hasChildren && segment.average ? totals.avg + segment.average : null;
+            const displayPB = !hasChildren && segment.pb ? totals.pb + segment.pb : null;
+            const displayGold = !hasChildren && segment.gold ? totals.gold + segment.gold : null;
 
             // If THIS row is a group parent, it defines a new group color for itself + its direct children
             const ownGroup: GroupCtx | null = hasChildren ? { bg: colorFromId(segment.id) } : null;
@@ -361,10 +429,22 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
                         </td>
 
                         <td>
-                            {!hasChildren && <TimeRow time={segment.average ? segment.average + totalAvg : null} />}
+                            {!hasChildren && (
+                                <TimeRow time={displayAvg} onChange={(ms) => updateSegmentAverage(segment.id, ms)} />
+                            )}
                         </td>
 
-                        <td>{!hasChildren && <TimeRow time={segment.pb ? segment.pb + totalBest : null} />}</td>
+                        <td>
+                            {!hasChildren && (
+                                <TimeRow time={displayPB} onChange={(ms) => updateSegmentPB(segment.id, ms)} />
+                            )}
+                        </td>
+
+                        <td>
+                            {!hasChildren && (
+                                <TimeRow time={displayGold} onChange={(ms) => updateSegmentGold(segment.id, ms)} />
+                            )}
+                        </td>
 
                         <td>
                             <IconButton icon={faFolder} tooltip="Add subsegment" onClick={() => addSegment(segment)} />
@@ -379,14 +459,15 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
                         </td>
                     </tr>
 
-                    {(segment.children ?? []).length > 0 &&
-                        renderRows(segment.children ?? [], depth + 1, nextInheritedGroup, nextIsDirectChild)}
+                    {hasChildren &&
+                        renderRows(segment.children ?? [], depth + 1, nextInheritedGroup, nextIsDirectChild, totals)}
                 </React.Fragment>
             );
 
             if (!hasChildren) {
-                totalAvg += segment.average;
-                totalBest += segment.pb;
+                totals.avg += segment.average;
+                totals.pb += segment.pb;
+                totals.gold += segment.gold;
             }
             return frag;
         });
@@ -539,11 +620,14 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
                                         <th>
                                             Personal Best <small>(HH:MM:SS.ccc)</small>
                                         </th>
+                                        <th>
+                                            Gold Time <small>(HH:MM:SS.ccc)</small>
+                                        </th>
                                         <th style={{ width: "5%" }}>Add Subsegment</th>
                                         <th style={{ width: "5%" }}></th>
                                     </tr>
                                 </thead>
-                                <tbody>{renderRows(segments, 0, null, false)}</tbody>
+                                <tbody>{renderRows(segments, 0, null, false, { avg: 0, pb: 0, gold: 0 })}</tbody>
                             </table>
                         )}
                     </div>
