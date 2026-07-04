@@ -5,7 +5,7 @@ export default class SplitFilePayload {
     id: string = "";
     game_name: string = "";
     game_category: string = "";
-    version: number = 1;
+    version: number = 0;
 
     selected_skin?: string;
 

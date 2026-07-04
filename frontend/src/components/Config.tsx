@@ -11,12 +11,18 @@ export type ConfigParams = {
 };
 
 const RECORDING_ARMED = 10;
+const DEFAULT_ROLLING_AVG = 20;
 
 export default function Config({ configPayload }: ConfigParams) {
     const [recording, setRecording] = useState(false);
     const [config, setConfig] = useState<ConfigPayload>(configPayload);
     const [availableSkins, setAvailableSkins] = useState<Array<string>>([]);
     const [selectedSkin, setSelectedSkin] = useState<string>(configPayload.selected_skin);
+    const [rollingAvg, setRollingAvg] = useState<number>(configPayload.rolling_average_runs ?? DEFAULT_ROLLING_AVG);
+
+    useEffect(() => {
+        setRollingAvg(config.rolling_average_runs ?? DEFAULT_ROLLING_AVG);
+    }, [config]);
 
     useEffect(() => {
         (async () => {
@@ -103,6 +109,30 @@ export default function Config({ configPayload }: ConfigParams) {
                     {availableSkins.map((s) => (
                         <option value={s} key={s}>
                             {s}
+                        </option>
+                    ))}
+                </select>
+            </div>
+
+            <hr />
+
+            <div id="rollingAvg">
+                <h3>Rolling Average Window</h3>
+
+                <select
+                    value={rollingAvg}
+                    onChange={(e) => {
+                        const v = parseInt(e.target.value);
+                        setRollingAvg(v);
+                        setConfig({
+                            ...config,
+                            rolling_average_runs: v,
+                        });
+                    }}
+                >
+                    {[5, 10, 20, 50, 100].map((n) => (
+                        <option key={n} value={n}>
+                            Last {n} Runs
                         </option>
                     ))}
                 </select>

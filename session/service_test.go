@@ -137,7 +137,7 @@ func getService() (*Service, *MockTimer, *MockRepository, *SplitFile) {
 	t := new(MockTimer)
 	m := new(MockRepository)
 	sf := getSplitFile()
-	service, _ := NewService(t)
+	service, _ := NewService(t, nil)
 	return service, t, m, sf
 }
 

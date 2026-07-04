@@ -16,7 +16,7 @@ func DomainSplitFileToDTO(sf session.SplitFile) dto.SplitFile {
 	// add personal best if exists
 	var PB *dto.Run = nil
 	if sf.PB != nil {
-		dtoPB := domainRunToDTO(*sf.PB, sf.ID, sf.Version)
+		dtoPB := domainRunToDTO(*sf.PB, sf.Version)
 		PB = &dtoPB
 	}
 
@@ -190,12 +190,12 @@ func dtoSegmentToDomain(dtoSeg dto.Segment) session.Segment {
 func domainRunsToDTO(runs []session.Run, splitFileID uuid.UUID, splitFileVersion int) []dto.Run {
 	out := make([]dto.Run, len(runs))
 	for i, r := range runs {
-		out[i] = domainRunToDTO(r, splitFileID, splitFileVersion)
+		out[i] = domainRunToDTO(r, splitFileVersion)
 	}
 	return out
 }
 
-func domainRunToDTO(run session.Run, splitFileID uuid.UUID, splitFileVersion int) dto.Run {
+func domainRunToDTO(run session.Run, splitFileVersion int) dto.Run {
 	return dto.Run{
 		ID:               run.ID.String(),
 		SplitFileVersion: splitFileVersion,

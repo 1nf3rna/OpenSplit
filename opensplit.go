@@ -65,7 +65,7 @@ func main() {
 	watcher := platform.NewDirChangeTracker()
 	skinService, skinUpdatedCh := skin.NewService(skinDir, configService, repoService, watcher)
 
-	sessionService, sessionUpdateChannel := session.NewService(timerService)
+	sessionService, sessionUpdateChannel := session.NewService(timerService, configService)
 	machine := statemachine.NewMachine(runtimeProvider, repoService, sessionService, configService, skinService)
 
 	// Build UI bridges with model update channels

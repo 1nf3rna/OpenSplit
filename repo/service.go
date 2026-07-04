@@ -9,6 +9,7 @@ import (
 	"github.com/zellydev-games/opensplit/dto"
 	"github.com/zellydev-games/opensplit/logger"
 	"github.com/zellydev-games/opensplit/repo/adapters"
+	"github.com/zellydev-games/opensplit/session"
 )
 
 const logModule = "repo"
@@ -79,6 +80,29 @@ func (s *Service) SaveSplitFileWindowDimensions(X int, Y int, Width int, Height 
 }
 
 func (s *Service) SaveSplitFile(splitFile dto.SplitFile) error {
+	// Merge statistics from the currently loaded split file when
+	// saving a newer split file version.
+	s.splitFileLock.RLock()
+	existingBytes, err := s.repository.GetLoadedSplitFile()
+	s.splitFileLock.RUnlock()
+
+	if err == nil {
+		existingDTO, err := adapters.JSONSplitFileToDTO(string(existingBytes))
+		if err == nil {
+			existingDomain, err := adapters.DTOSplitFileToDomain(existingDTO)
+			if err == nil {
+				newDomain, err := adapters.DTOSplitFileToDomain(splitFile)
+				if err == nil {
+					if newDomain.Version > existingDomain.Version {
+						session.UpgradeSplitFile(&existingDomain, &newDomain)
+						newDomain.BuildStats()
+						splitFile = adapters.DomainSplitFileToDTO(newDomain)
+					}
+				}
+			}
+		}
+	}
+
 	payload, err := adapters.SplitFileToFrontEnd(splitFile)
 	if err != nil {
 		return err
