@@ -30,6 +30,11 @@ export default function Splitter({ sessionPayload, configPayload }: SplitterPara
     const [contextMenuItems, setContextMenuItems] = React.useState<MenuItem[]>([]);
     const [comparison, setComparison] = React.useState<Comparison>(CompareAgainst.Average);
     const [globalHotkeys, setGlobalHotkeys] = React.useState<boolean>(configPayload.global_hotkeys_active);
+    const comparisonLabel: Record<Comparison, string> = {
+        [CompareAgainst.Average]: "Comparing Against: Average",
+        [CompareAgainst.Best]: "Comparing Against: Best Run",
+        [CompareAgainst.SumOfBest]: "Comparing Against: Sum of Best Segments",
+    };
 
     useEffect(() => {
         const rotate = (dir: number) => {
@@ -148,6 +153,7 @@ export default function Splitter({ sessionPayload, configPayload }: SplitterPara
         <div {...contextMenu.bind} id="splitter">
             <ContextMenu state={contextMenu.state} close={contextMenu.close} items={contextMenuItems} />
             <SegmentList sessionPayload={sessionPayload} comparison={comparison} />
+            <div className="comparison-mode">{comparisonLabel[comparison]}</div>
             <Timer offset={sessionPayload.loaded_split_file?.offset ?? 0} wr={sessionPayload.loaded_split_file?.wr} />
         </div>
     );
