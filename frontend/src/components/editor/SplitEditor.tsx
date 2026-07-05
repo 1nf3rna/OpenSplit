@@ -101,12 +101,10 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
     const [gameName, setGameName] = React.useState<string>(splitFilePayload?.game_name ?? "");
     const [gameID, setGameID] = useState(splitFilePayload?.speedrun_game_id ?? "");
     const [games, setGames] = useState<GameMatch[]>([]);
-    const [showGames, setShowGames] = useState(false);
 
     const [categoryName, setCategoryName] = React.useState<string>(splitFilePayload?.game_category ?? "");
     const [CategoryID, setCategoryID] = useState(splitFilePayload?.speedrun_game_category_id ?? "");
     const [categories, setCategories] = useState<Category[]>([]);
-    const [showCategories, setShowCategories] = useState(false);
 
     const [attempts, setAttempts] = React.useState<number>(splitFilePayload?.attempts ?? 0);
     const [segments, setSegments] = useState<SegmentPayload[]>(splitFilePayload?.segments ?? []);
@@ -115,6 +113,8 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
     const [availableSkins, setAvailableSkins] = useState<string[]>([]);
     const [selectedSkin, setSelectedSkin] = useState(splitFilePayload?.selected_skin ?? "");
     const [showCumulativeTimes, setShowCumulativeTimes] = useState(false);
+    const [gameActive, setGameActive] = useState(false);
+    const [categoryActive, setCategoryActive] = useState(false);
     const selectingGame = React.useRef(false);
 
     useEffect(() => {
@@ -128,7 +128,7 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
         const timeout = setTimeout(async () => {
             if (query.length === 0) {
                 setGames([]);
-                setShowGames(false);
+                // setShowGames(false);
                 return;
             }
 
@@ -142,7 +142,7 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
                 })),
             );
 
-            setShowGames(query.length > 0);
+            // setShowGames(gameInputFocused && query.length > 0);
         }, 200);
 
         return () => clearTimeout(timeout);
@@ -153,7 +153,7 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
 
         if (!gameID) {
             setCategories([]);
-            setShowCategories(false);
+            // setShowCategories(false);
             return;
         }
 
@@ -161,7 +161,7 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
             console.log("categories", result);
 
             setCategories(result.data);
-            setShowCategories(result.data.length > 0);
+            // setShowCategories(gameInputFocused && result.data.length > 0);
         });
     }, [gameID]);
 
@@ -431,8 +431,8 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
     const gameAutocompleteRef = React.useRef<HTMLDivElement>(null);
     const categoryAutocompleteRef = React.useRef<HTMLDivElement>(null);
 
-    useClickOutside(gameAutocompleteRef, () => setShowGames(false));
-    useClickOutside(categoryAutocompleteRef, () => setShowCategories(false));
+    useClickOutside(gameAutocompleteRef, () => setGameActive(false));
+    useClickOutside(categoryAutocompleteRef, () => setCategoryActive(false));
 
     const longestGameWidth = React.useMemo(() => {
         const canvas = document.createElement("canvas");
@@ -697,9 +697,10 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
                 <div className="row">
                     <label htmlFor="game_name">Game Name</label>
                     <div className="autocomplete" ref={gameAutocompleteRef}>
-                        {/*<input value={gameName} onChange={(e) => setGameName(e.target.value)} autoComplete="off" />*/}
                         <input
                             value={gameName}
+                            onFocus={() => setGameActive(true)}
+                            onClick={() => setGameActive(true)}
                             onChange={(e) => {
                                 setGameName(e.target.value);
 
@@ -711,7 +712,7 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
                             }}
                             autoComplete="off"
                         />
-                        {showGames && games.length > 0 && (
+                        {gameActive && games.length > 0 && (
                             <ul className="autocomplete-list" style={{ width: `${Math.ceil(longestGameWidth)}px` }}>
                                 {games.map((game) => (
                                     <li
@@ -730,7 +731,8 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
                                             setCategoryName("");
                                             setCategoryID("");
 
-                                            setShowGames(false);
+                                            setGameActive(false);
+                                            // setShowGames(false);
                                         }}
                                     >
                                         {game.name}
@@ -746,12 +748,12 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
                     <div className="autocomplete" ref={categoryAutocompleteRef}>
                         <input
                             value={categoryName}
-                            onFocus={() => setShowCategories(categories.length > 0)}
-                            onClick={() => setShowCategories(categories.length > 0)}
+                            onFocus={() => setCategoryActive(true)}
+                            onClick={() => setCategoryActive(true)}
                             onChange={(e) => setCategoryName(e.target.value)}
                             autoComplete="off"
                         />
-                        {showCategories && categories.length > 0 && (
+                        {categoryActive && categories.length > 0 && (
                             <ul className="autocomplete-list" style={{ width: `${Math.ceil(longestCategoryWidth)}px` }}>
                                 {categories.map((category) => (
                                     <li
@@ -759,7 +761,8 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
                                         onMouseDown={() => {
                                             setCategoryName(category.name);
                                             setCategoryID(category.id);
-                                            setShowCategories(false);
+                                            setCategoryActive(false);
+                                            // setShowCategories(false);
                                         }}
                                     >
                                         {category.name}
