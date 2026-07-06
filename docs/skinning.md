@@ -19,39 +19,39 @@ The application defines the following layer order:
 Layers are applied in order.
 
 ### Layer Purpose
-reset - Browser normalization and application layout
-components - Core application styling
-vars - Skin variables
-skins - Visual appearance
-overrides - Final user overrides
+_reset_ - Browser normalization and application layout <br>
+_components_ - Core application styling <br>
+_vars_ - Skin variables <br>
+_skins_ - Visual appearance <br>
+_overrides_ - Final user overrides <br>
 
 Later layers always win/trump earlier layers.
 
 For example:
 
-components
-↓
-vars
-↓
-skins
-↓
-overrides
+components <br>
+↓ <br>
+vars <br>
+↓ <br>
+skins <br>
+↓ <br>
+overrides <br>
 
 ## Application Styles
-
 These files belong to the application and should generally not be modified.
 
-styles/
-reset.css
-common.css
-app.css
-forms.css
-autocomplete.css
-config.css
-context-menu.css
-splitter.css
-timer.css
-
+```bash
+├── styles/
+│   ├── reset.css
+│   ├── common.css
+│   ├── app.css
+│   ├── forms.css
+│   ├── autocomplete.css
+│   ├── config.css
+│   ├── context-menu.css
+│   ├── splitter.css
+│   ├── timer.css
+```
 These define:
 
 - window layout
@@ -65,273 +65,222 @@ These define:
 A skin can override nearly all of these.
 
 ## Skin Structure
-
 A skin consists of:
 
-skin/
-    index.css
+```bash
+├── skin/
+│   ├── index.css
+│   ├── vars.css
+│   ├── splitter.css
+│   ├── timer.css
+│   ├── complete.css
+│   ├── pb.css
+│   ├── overrides.css
+```
 
-    vars.css
-    splitter.css
-    timer.css
-
-    complete.css
-    pb.css
-
-    overrides.css
-
-The only required file is:
-
-index.css
-
-Everything else is optional.
+The only required file is **index.css**; everything else is optional.
 
 ### index.css
-
 This loads every part of the skin.
 
 Example:
 
+```
 @import "./vars.css";
 @import "./splitter.css";
 @import "./timer.css";
 @import "./overrides.css";
 @import "./complete.css";
 @import "./pb.css";
+```
 
 Files may be omitted if unused.
 
 ### vars.css
-
 This defines reusable variables.
 
 Example:
 
+```
 :root {
-
     --color-primary: #4f0f7f;
-
     --segment-padding: 5px;
-
     --gameinfo-title-size:20px;
-
 }
-
+```
 These variables are referenced throughout the application.
 
 Changing variables is the preferred way to customize a skin.
 
 #### Available Variables
-**Split List**
+**Split List**   <br>
 
 --splitlist-direction
 
-Values
-
-column
-row
+Values can be either _column_ or _row_.
 
 Example:
-
+```
 :root{
 --splitlist-direction:row;
 }
+```
 
-This changes the split list from vertical to horizontal.
+This changes the split list from vertical (columns) to horizontal (rows).
 
-**Game Header**
+**Game Header**   <br>
+--gameinfo-text-align  <br>
+--gameinfo-title-size  <br>
+--gameinfo-title-font-weight  <br>
+--gameinfo-title-padding  <br>
+--gameinfo-title-line-height  <br>
+--gameinfo-category-margin  <br>
+--gameinfo-category-padding  <br>
+--gameinfo-category-font-size  <br>
+--gameinfo-category-font-weight  <br>
+--gameinfo-category-line-height  <br>
 
---gameinfo-text-align
-
---gameinfo-title-size
---gameinfo-title-font-weight
---gameinfo-title-padding
---gameinfo-title-line-height
-
---gameinfo-category-margin
---gameinfo-category-padding
---gameinfo-category-font-size
---gameinfo-category-font-weight
---gameinfo-category-line-height
-
-Example
-
+Example:
+```
 :root{
-
     --gameinfo-text-align:left;
-
     --gameinfo-title-size:28px;
-
     --gameinfo-category-font-size:16px;
-
 }
+```
 
-**Segment List**
+**Segment List**  <br>
+--segment-border  <br>
+--segment-padding  <br>
+--segment-name-width  <br>
+--active-segment-background  <br>
+--active-segment-text-color  <br>
 
---segment-border
+Example:
 
---segment-padding
-
---segment-name-width
-
---active-segment-background
-
---active-segment-text-color
-
-Example
-
+```
 :root{
-
     --segment-padding:12px;
-
     --segment-border:none;
-
     --segment-name-width:70%;
-
 }
+```
 
-**Delta Column**
+**Delta Column**  <br>
+--split-delta-font-family  <br>
+--split-delta-text-align  <br>
 
---split-delta-font-family
-
---split-delta-text-align
-
-Example
-
+Example:
+```
 :root{
-
     --split-delta-font-family:Hack;
-
     --split-delta-text-align:center;
-
 }
+```
 
-**Comparison Column**
+**Comparison Column**  <br>
+--split-comparison-font-family  <br>
+--split-comparison-text-align  <br>
 
---split-comparison-font-family
-
---split-comparison-text-align
-
-Example
-
+Example:
+```
 :root{
-
     --split-comparison-text-align:left;
-
 }
+```
 
-**Primary Colors**
+**Primary Colors**  <br>
+--color-primary  <br>
 
---color-primary
+Used for:
 
-Used for
+- Game Header
+- Final Segment
 
-Game Header
-Final Segment
-
-Example
-
+Example:
+```
 :root{
-
     --color-primary:
         linear-gradient(
             to bottom,
             #0b4075,
             #082850
         );
-
 }
+```
 
 ### splitter.css
-
 This file controls the appearance of the split list.
 
 Example:
-
+```
 #gameInfo{
-
     background:#222;
-
 }
 
 #splitList table tr.selected{
-
     background:red;
     color:white;
-
 }
+```
 
 Anything inside the splitter may be overridden.
 
 ### timer.css
-
 Controls timer colors.
 
 #### Available classes
+.timer-ahead  <br>
+.timer-behind  <br>
+.timer-gold  <br>
 
-.timer-ahead
-
-.timer-behind
-
-.timer-gold
-
-Example
-
+Example:
+```
 .timer-ahead{
-
     color:#00ff00;
-
 }
 
 .timer-behind{
-
     color:red;
-
 }
 
-PB Animation
+.timer-gold{
+    color:#D4AF37;
+)
+```
 
-When a Personal Best is achieved:
+#### PB Animation
+When a personal best (PB) is achieved:
 
-#gameInfo.pb
+#gameInfo.pb  <br>
+#finalSegment.pb  <br>
 
-#finalSegment.pb
+receive the class `pb`.
 
-receive the class
-
-pb
-
-Example
-
+Example:
+```
 #gameInfo.pb{
-
     animation:pulse 1s infinite;
-
 }
+```
 
-Complete Animation
+#### Complete Animation
+After completing a run:
 
-After finishing a run:
+#gameInfo.complete  <br>
+#finalSegment.complete  <br>
 
-#gameInfo.complete
+receive the class `complete`
 
-#finalSegment.complete
-
-receive
-
-complete
-
-Example
-
+Example:
+```
 #gameInfo.complete{
-
     filter:brightness(120%);
-
 }
+```
 
 ### overrides.css
-
-This is the final stylesheet loaded.
+This is the final stylesheet loaded and thereby trumps all other stylesheets.
 
 Use this when:
 
@@ -340,276 +289,213 @@ Use this when:
 - adjusting spacing
 - modifying components
 
-Anything placed here overrides every previous stylesheet.
+Again: **anything placed here overrides every previous stylesheet**.
 
-Example
-
+Example:
+```
 button{
-
     border-radius:20px;
-
 }
 
 .datagrid{
-
     border:none;
-
 }
+```
 
 #### Layout Overrides
+A skin is not limited to colors. Any layout can be changed.
 
-A skin is not limited to colors.
+Some examples include:
 
-Any layout can be changed.
-
-Example
-
-Vertical timer
-
+**Vertical timer**
+```
 #timer-container{
-
     display:flex;
-
     flex-direction:column;
-
 }
+```
 
-Horizontal split list
-
+**Horizontal split list**
+```
 :root{
-
     --splitlist-direction:row;
-
 }
+```
 
-Game title on the left
-
+**Game title on the left**
+```
 #gameInfo{
-
     text-align:left;
-
     align-items:flex-start;
-
 }
+```
 
-Change table spacing
-
+**Change table spacing**
+```
 #splitList td{
-
     padding:15px;
-
 }
+```
 
-Hide the category
-
+**Hide the category**
+```
 #gameCategory{
-
     display:none;
-
 }
+```
 
-Move the attempt counter
-
+**Move the attempt counter**
+```
 #attempts{
-
     left:10px;
-
     right:auto;
-
 }
+```
 
 #### Overriding Application Components
+All application components may be overridden. To name several:
 
-All application components may be overridden.
+- button
+- input
+- textarea
+- label
+- .container
+- .container-title
+- .datagrid
+- .actions
+- .autocomplete
+- .cm-panel
+- .cm-item
+- .tooltip-bubble
+- .icon-btn
 
-Examples include:
-
-button
-
-input
-
-textarea
-
-label
-
-.container
-
-.container-title
-
-.datagrid
-
-.actions
-
-.autocomplete
-
-.cm-panel
-
-.cm-item
-
-.tooltip-bubble
-
-.icon-btn
-
-Example
-
+Some more specific examples:
+```
 button{
-
     background:#202020;
-
     border-radius:12px;
-
 }
 
 button:hover{
-
     background:#0055ff;
-
 }
+```
 
 ## Fonts
-
 The application provides:
 
-Techna
-
-Hack
-
-Monofonto
-
-Sublima
+- Techna
+- Hack
+- Monofonto
+- Sublima
 
 A skin may use these directly.
 
-Example
-
+Example:
+```
 #gameTitle{
-
     font-family:Sublima;
-
 }
+```
+### Locally installed fonts
+You may also use any installed fonts to render within OpenSplit. If you had a font called Serpentine installed locally, an example might read:
+```
+#time-container {
+    font-family: "Serpentine", sans-serif;
+    font-size: 50px;
+    }
+```
 
-Or load additional fonts.
+It is possible to use a downloaded font present in a `fonts/` folder found within the `skin/` folder, too.
 
-### Available IDs
-
+## Available IDs
 The following IDs are intended for skins.
+- #splitter
+- #splitList
+- #splitBody
+- #splitContainer
+- #gameInfo
+- #gameTitle
+- #gameCategory
+- #attempts
+- #timer-container
+- #time-container
+- #world-record
+- #finalSegment
 
-#splitter
-
-#splitList
-
-#splitBody
-
-#splitContainer
-
-#gameInfo
-
-#gameTitle
-
-#gameCategory
-
-#attempts
-
-#timer-container
-
-#time-container
-
-#world-record
-
-#finalSegment
-
-### Available Classes
-
-.selected
-
-.complete
-
-.pb
-
-.timer-ahead
-
-.timer-behind
-
-.timer-gold
-
-.splitName
-
-.splitDelta
-
-.splitComparison
-
-.seg-group
-
-.seg-group-parent
-
-.seg-group-child
-
-.seg-group-bottom
+## Available Classes
+- .selected
+- .complete
+- .pb
+- .timer-ahead
+- .timer-behind
+- .timer-gold
+- .splitName
+- .splitDelta
+- .splitComparison
+- .seg-group
+- .seg-group-parent
+- .seg-group-child
+- .seg-group-bottom
 
 ## Best Practices
 
 Prefer changing variables before overriding selectors.
 
 Good
-
+```
 :root{
-
     --segment-padding:10px;
-
 }
+```
 
 Instead of
-
+```
 #splitList td{
-
     padding:10px;
-
 }
+```
 
 Variables are more stable across releases.
 
 Use overrides.css only when variables cannot achieve the desired effect.
 
-Example: Minimal Skin
-minimal/
+Some examples of skins:
 
-    index.css
-    vars.css
+**Minimal Skin** <br>
+```bash
+├── minimal/
+│   ├── index.css
+│   ├── vars.css
+```
 
-index.css
-
+`index.css` could contain:
+```
 @import "./vars.css";
+```
 
-vars.css
-
+`vars.css` could contain:
+```
 :root{
-
     --color-primary:#202020;
-
     --active-segment-background:#444;
-
     --active-segment-text-color:white;
-
 }
-Example: Full Layout Skin
-retro/
+```
 
-    index.css
+**Full Layout Skin** <br>
+```bash
+├── retro/
+│   ├── index.css
+│   ├── vars.css
+│   ├── splitter.css
+│   ├── timer.css
+│   ├── complete.css
+│   ├── pb.css
+│   ├── overrides.css
+```
 
-    vars.css
-
-    splitter.css
-
-    timer.css
-
-    complete.css
-
-    pb.css
-
-    overrides.css
-
-This skin could:
-
+Without changing any application source code, this skin could: 
 - move the timer
 - make horizontal splits
 - use bitmap fonts
@@ -621,12 +507,8 @@ This skin could:
 - modify autocomplete
 - replace every application component
 
-without changing any application source code.
-
 ## Compatibility
-
 Future versions of OpenSplit may (will certainly!) introduce additional variables and selectors. To maximize compatibility:
-
 - Prefer variables over selector overrides.
 - Limit overrides to elements you intend to customize.
 - Avoid relying on undocumented internal DOM structure where possible.
