@@ -406,7 +406,10 @@ You may also use any installed fonts to render within OpenSplit. If you had a fo
     }
 ```
 
-It is possible to use a downloaded font present in a `fonts/` folder found within the `skin/` folder, too.
+It is possible to use a downloaded font present in a `fonts/` folder found within the `skin/` folder, too. You would need to declare the skin, similar to the below:
+```
+src: url("./fonts/<filename>.ttf") format("<type>");
+```
 
 ## Available IDs
 The following IDs are intended for skins.
