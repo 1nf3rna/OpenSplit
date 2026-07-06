@@ -271,6 +271,8 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
             window_height: splitFilePayload?.window_height ?? 550,
         });
 
+        console.log("SEGMENTS BEFORE SAVE", JSON.stringify(payload));
+
         await Dispatch(Command.SUBMIT, JSON.stringify(payload));
     };
 
