@@ -61,15 +61,18 @@ export const TimeRow = forwardRef<Handle, TimeRowProps>((props, ref) => {
     return (
         <div className="segment-time">
             <input
+                placeholder="H"
                 value={hours}
                 onChange={(e) => {
                     setHours(e.target.value);
                     emitChange(e.target.value, minutes, seconds, centis);
                 }}
             />
+
             <span>:</span>
 
             <input
+                placeholder="MM"
                 value={minutes}
                 onChange={(e) => {
                     setMinutes(e.target.value);
@@ -80,6 +83,7 @@ export const TimeRow = forwardRef<Handle, TimeRowProps>((props, ref) => {
             <span>:</span>
 
             <input
+                placeholder="SS"
                 value={seconds}
                 onChange={(e) => {
                     setSeconds(e.target.value);
@@ -90,6 +94,7 @@ export const TimeRow = forwardRef<Handle, TimeRowProps>((props, ref) => {
             <span>.</span>
 
             <input
+                placeholder="cc"
                 value={centis}
                 onChange={(e) => {
                     setCentis(e.target.value);

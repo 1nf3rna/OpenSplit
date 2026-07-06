@@ -19,6 +19,7 @@ type Service struct {
 	SplitFileDir         string                              `json:"splitfile_dir"`
 	SkinsDir             string                              `json:"skins_dir"`
 	SelectedSkin         string                              `json:"selected_skin"`
+	RollingAverageRuns   int                                 `json:"rolling_average_runs"`
 	configUpdatedChannel chan<- *Service
 }
 
@@ -29,6 +30,7 @@ func NewService(splitFileDir string, skinsDir string) (*Service, chan *Service) 
 		SkinsDir:             skinsDir,
 		SpeedRunAPIBase:      "",
 		KeyConfig:            map[command.Command]keyinfo.KeyData{},
+		RollingAverageRuns:   20,
 		configUpdatedChannel: updateChannel,
 	}, updateChannel
 }
@@ -61,6 +63,7 @@ func (s *Service) UpdateKeyBinding(c command.Command, data keyinfo.KeyData) {
 func (s *Service) CreateDefaultConfig() {
 	s.KeyConfig = make(map[command.Command]keyinfo.KeyData)
 	s.EnsureDefaultKeyBindings()
+	s.RollingAverageRuns = 20
 	s.sendUIBridgeUpdate()
 	logger.Infof(logModule, "created default config")
 }

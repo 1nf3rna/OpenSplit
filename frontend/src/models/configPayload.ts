@@ -12,4 +12,5 @@ export type ConfigPayload = {
     key_config: Record<Command, KeyInfo>;
     global_hotkeys_active: boolean;
     selected_skin: string;
+    rolling_average_runs: number;
 };

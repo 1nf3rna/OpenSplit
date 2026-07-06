@@ -15,7 +15,7 @@ func DomainToDTO(svc *session.Service) *dto.Session {
 	var dtoRun *dto.Run = nil
 	currentRun, loaded := svc.Run()
 	if loaded {
-		r := domainRunToDTO(currentRun, sf.ID, sf.Version)
+		r := domainRunToDTO(currentRun, sf.Version)
 		dtoRun = &r
 	}
 

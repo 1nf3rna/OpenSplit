@@ -1,79 +1,40 @@
-import {
-    faArrowDown,
-    faArrowRightFromBracket,
-    faArrowUp,
-    faArrowUpFromBracket,
-    faFolder,
-    faTrash,
-} from "@fortawesome/free-solid-svg-icons";
 import React, { useEffect, useState } from "react";
 
 import { Dispatch, ExportSplitFile } from "../../../wailsjs/go/dispatcher/Service";
 import { GetAvailableSkins } from "../../../wailsjs/go/skin/Service";
 import { Platforms, SearchCategories, SearchGames } from "../../../wailsjs/go/speedrun/Service";
 import { WindowCenter, WindowSetSize } from "../../../wailsjs/runtime";
-import addIcon from "../../assets/images/add.png";
-import removeIcon from "../../assets/images/remove.png";
 import { useClickOutside } from "../../hooks/useClickOutside";
 import { Command } from "../../models/command";
 import SegmentPayload from "../../models/segmentPayload";
 import SplitFilePayload from "../../models/splitFilePayload";
-import { IconButton } from "../Tooltip";
 import { colorFromId, GroupCtx } from "./hashColor";
-import { TimeRow } from "./TimeRow";
+import SegmentRow from "./SegmentRow";
+import {
+    addChildRecursive,
+    cloneSegments,
+    deleteSegmentRecursive,
+    groupIntoPreviousSibling,
+    moveSegmentDown,
+    moveSegmentUp,
+    ungroupToTopLevel,
+} from "./segmentTree";
 
 type SplitEditorParams = {
     splitFilePayload: SplitFilePayload | null;
+    speedRunAPIBase?: string;
 };
 
-function addChildRecursive(list: SegmentPayload[], parent: SegmentPayload): SegmentPayload[] {
-    return list.map((item) => {
-        if (item.id === parent.id) {
-            const child = new SegmentPayload();
-            return {
-                ...item,
-                children: [...(item.children ?? []), child],
-            };
-        }
+type RunningTotals = {
+    avg: number;
+    pb: number;
+    gold: number;
+};
 
-        return {
-            ...item,
-            children: addChildRecursive(item.children ?? [], parent),
-        };
-    });
-}
-
-// Clone to safely do in-place operations on the copy
-function cloneSegments(list: SegmentPayload[]): SegmentPayload[] {
-    return (list ?? []).map((seg) => {
-        return new SegmentPayload({
-            ...seg,
-            children: cloneSegments(seg.children ?? []),
-        });
-    });
-}
-
-type ParentRef = { node: SegmentPayload; siblings: SegmentPayload[]; index: number };
-
-function findNodeMutable(
-    siblings: SegmentPayload[],
-    id: string,
-    parents: ParentRef[] = [],
-): { siblings: SegmentPayload[]; index: number; parents: ParentRef[] } | null {
-    for (let i = 0; i < siblings.length; i++) {
-        const node = siblings[i];
-        if (node.id === id) {
-            return { siblings, index: i, parents };
-        }
-        const kids = node.children ?? [];
-        if (kids.length > 0) {
-            const nextParents = parents.concat([{ node, siblings, index: i }]);
-            const found = findNodeMutable(kids, id, nextParents);
-            if (found) return found;
-        }
-    }
-    return null;
-}
+type RenderResult = {
+    rows: React.ReactElement[];
+    totals: RunningTotals;
+};
 
 type GameMatch = {
     id: string;
@@ -92,97 +53,46 @@ type Category = {
 };
 
 export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
-    // Is this a new file or are we editing?
     const editing = splitFilePayload != null;
 
-    const [platform, setPlatform] = React.useState<string>(splitFilePayload?.platform ?? "SNES");
+    const [platform, setPlatform] = useState(splitFilePayload?.platform || "");
     const [platforms, setPlatforms] = useState<Platform[]>([]);
 
-    const [gameName, setGameName] = React.useState<string>(splitFilePayload?.game_name ?? "");
+    const [gameName, setGameName] = useState(splitFilePayload?.game_name ?? "");
     const [gameID, setGameID] = useState(splitFilePayload?.speedrun_game_id ?? "");
     const [games, setGames] = useState<GameMatch[]>([]);
 
-    const [categoryName, setCategoryName] = React.useState<string>(splitFilePayload?.game_category ?? "");
-    const [CategoryID, setCategoryID] = useState(splitFilePayload?.speedrun_game_category_id ?? "");
+    const [categoryName, setCategoryName] = useState(splitFilePayload?.game_category ?? "");
+    const [categoryID, setCategoryID] = useState(splitFilePayload?.speedrun_game_category_id ?? "");
     const [categories, setCategories] = useState<Category[]>([]);
 
-    const [attempts, setAttempts] = React.useState<number>(splitFilePayload?.attempts ?? 0);
-    const [segments, setSegments] = useState<SegmentPayload[]>(splitFilePayload?.segments ?? []);
-    const [offsetMS, setOffsetMS] = useState(splitFilePayload?.offset ?? 0);
+    const [attempts, setAttempts] = useState(splitFilePayload?.attempts ?? 0);
+
+    const [segments, setSegments] = useState<SegmentPayload[]>(cloneSegments(splitFilePayload?.segments ?? []));
+
     const [offsetText, setOffsetText] = useState(String(splitFilePayload?.offset ?? 0));
+
     const [availableSkins, setAvailableSkins] = useState<string[]>([]);
     const [selectedSkin, setSelectedSkin] = useState(splitFilePayload?.selected_skin ?? "");
+
     const [showCumulativeTimes, setShowCumulativeTimes] = useState(false);
+
     const [gameActive, setGameActive] = useState(false);
     const [categoryActive, setCategoryActive] = useState(false);
+
     const selectingGame = React.useRef(false);
 
-    useEffect(() => {
-        if (selectingGame.current) {
-            selectingGame.current = false;
-            return;
-        }
+    const gameAutocompleteRef = React.useRef<HTMLDivElement>(null);
+    const categoryAutocompleteRef = React.useRef<HTMLDivElement>(null);
 
-        const query = gameName.trim();
-
-        const timeout = setTimeout(async () => {
-            if (query.length === 0) {
-                setGames([]);
-                // setShowGames(false);
-                return;
-            }
-
-            const games = await SearchGames(query);
-
-            setGames(
-                games.data.map((g) => ({
-                    id: g.id,
-                    name: g.names.international,
-                    platforms: g.platforms,
-                })),
-            );
-
-            // setShowGames(gameInputFocused && query.length > 0);
-        }, 200);
-
-        return () => clearTimeout(timeout);
-    }, [gameName]);
+    useClickOutside(gameAutocompleteRef, () => setGameActive(false));
+    useClickOutside(categoryAutocompleteRef, () => setCategoryActive(false));
 
     useEffect(() => {
-        console.log("gameID changed:", gameID);
-
-        if (!gameID) {
-            setCategories([]);
-            // setShowCategories(false);
-            return;
-        }
-
-        SearchCategories(gameID).then((result) => {
-            console.log("categories", result);
-
-            setCategories(result.data);
-            // setShowCategories(gameInputFocused && result.data.length > 0);
-        });
-    }, [gameID]);
-
-    useEffect(() => {
-        Platforms().then((p) => {
-            setPlatforms(p);
-        });
-    }, []);
-
-    useEffect(() => {
+        setSegments(cloneSegments(splitFilePayload?.segments ?? []));
         const offset = splitFilePayload?.offset ?? 0;
-        setOffsetMS(offset);
         setOffsetText(String(offset));
     }, [splitFilePayload]);
-
-    const handleOffsetChange = (v: string) => {
-        // Allow empty string, "-" and any integer being typed
-        if (/^-?\d*$/.test(v)) {
-            setOffsetText(v);
-        }
-    };
 
     useEffect(() => {
         GetAvailableSkins().then((skins) => {
@@ -197,96 +107,123 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
     }, [splitFilePayload]);
 
     useEffect(() => {
-        console.log("SplitEditor payload", JSON.stringify(splitFilePayload, null, 2));
-        console.log("offsetMS state", offsetMS);
-    }, [splitFilePayload]);
+        if (platforms.length === 0) return;
 
-    // Position and size the edit window
+        const exists = platforms.some((p) => p.name === platform);
+
+        if (!exists) {
+            setPlatform(platforms[0].name);
+        }
+    }, [platforms]);
+
+    useEffect(() => {
+        if (!editing && !platform && platforms.length > 0) {
+            setPlatform(platforms[0].name);
+        }
+    }, [platforms, editing]);
+
+    useEffect(() => {
+        async function loadPlatforms() {
+            try {
+                const result = await Platforms();
+                setPlatforms(result);
+            } catch (err) {
+                console.error("Unable to load platforms", err);
+            }
+        }
+
+        loadPlatforms();
+    }, []);
+
+    useEffect(() => {
+        if (selectingGame.current) {
+            selectingGame.current = false;
+            return;
+        }
+
+        const query = gameName.trim();
+
+        const timeout = setTimeout(async () => {
+            if (query.length === 0) {
+                setGames([]);
+                return;
+            }
+
+            const result = await SearchGames(query);
+
+            setGames(
+                result.data.map((g) => ({
+                    id: g.id,
+                    name: g.names.international,
+                    platforms: g.platforms,
+                })),
+            );
+        }, 200);
+
+        return () => clearTimeout(timeout);
+    }, [gameName]);
+
+    useEffect(() => {
+        if (!gameID) {
+            setCategories([]);
+            return;
+        }
+
+        SearchCategories(gameID).then((result) => {
+            setCategories(result.data);
+        });
+    }, [gameID]);
+
+    useEffect(() => {
+        async function updatePlatforms() {
+            const match = games.find((g) => g.id === gameID);
+
+            if (match?.platforms.length) {
+                setPlatforms(match.platforms);
+            } else {
+                setPlatforms(await Platforms());
+            }
+        }
+
+        updatePlatforms();
+    }, [gameID, games]);
+
     useEffect(() => {
         WindowSetSize(1000, 900);
         WindowCenter();
     }, []);
 
+    const handleOffsetChange = (value: string) => {
+        if (/^-?\d*$/.test(value)) {
+            setOffsetText(value);
+        }
+    };
+
     const addSegment = (parent: SegmentPayload | null) => {
         if (parent === null) {
-            // top-level segment
             setSegments((prev) => [...prev, new SegmentPayload()]);
         } else {
-            // subsegment
             setSegments((prev) => addChildRecursive(prev, parent));
         }
     };
 
-    const updateSegmentIcon = (id: string, event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (!file) {
-            return;
-        }
-
-        const reader = new FileReader();
-
-        reader.onload = () => {
-            updateSegment(id, (segment) => ({
-                ...segment,
-                icon: reader.result as string,
-            }));
-        };
-
-        reader.readAsDataURL(file);
-
-        // allow selecting the same file again later
-        event.target.value = "";
-    };
-
     function updateSegment(id: string, updater: (segment: SegmentPayload) => SegmentPayload) {
-        function updateRecursive(list: SegmentPayload[]): SegmentPayload[] {
-            return list.map((item) => {
-                if (item.id === id) {
-                    return updater(item);
-                }
-
-                return {
-                    ...item,
-                    children: updateRecursive(item.children ?? []),
-                };
-            });
+        function recurse(list: SegmentPayload[]): SegmentPayload[] {
+            return list.map((segment) =>
+                segment.id === id
+                    ? updater(segment)
+                    : {
+                          ...segment,
+                          children: recurse(segment.children ?? []),
+                      },
+            );
         }
 
-        setSegments((prev) => updateRecursive(prev));
-    }
-
-    function updateSegmentName(id: string, name: string) {
-        function updateRecursive(list: SegmentPayload[]): SegmentPayload[] {
-            return list.map((item) => {
-                if (item.id === id) {
-                    return { ...item, name };
-                }
-
-                if ((item.children ?? []).length > 0) {
-                    return {
-                        ...item,
-                        children: updateRecursive(item.children ?? []),
-                    };
-                }
-
-                return item;
-            });
-        }
-
-        setSegments((prev) => updateRecursive(prev));
+        setSegments((prev) => recurse(prev));
     }
 
     const deleteSegment = (id: string) => {
-        function deleteRecursive(list: SegmentPayload[]): SegmentPayload[] {
-            return list
-                .filter((seg) => seg.id !== id) // remove the target
-                .map((seg) => ({
-                    ...seg,
-                    children: deleteRecursive(seg.children ?? []), // recurse downward
-                }));
-        }
-
-        setSegments((prev) => deleteRecursive(prev));
+        setSegments((prev) => deleteSegmentRecursive(prev, id));
     };
 
     const emptyWR = {
@@ -300,402 +237,144 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
     const saveSplitFile = async (e: React.MouseEvent<HTMLButtonElement>) => {
         e.preventDefault();
 
-        const newSplitFilePayload = SplitFilePayload.createFrom({
+        const payload = SplitFilePayload.createFrom({
             id: splitFilePayload?.id ?? "",
+
             game_name: gameName,
             speedrun_game_id: gameID,
+
             game_category: categoryName,
-            speedrun_game_category_id: CategoryID,
+            speedrun_game_category_id: categoryID,
+
             version: splitFilePayload?.version ?? 0,
 
             selected_skin: selectedSkin,
 
             segments: segments,
+
             runs: splitFilePayload?.runs ?? [],
             pb: splitFilePayload?.pb ?? null,
 
             sob: splitFilePayload?.sob ?? 0,
+
             attempts: Number(attempts),
+
             offset: offsetText === "" || offsetText === "-" ? 0 : parseInt(offsetText, 10),
+
             platform: platform,
 
             wr: splitFilePayload?.wr ?? emptyWR,
 
             window_x: splitFilePayload?.window_x ?? 100,
             window_y: splitFilePayload?.window_y ?? 100,
-            window_height: splitFilePayload?.window_height ?? 550,
             window_width: splitFilePayload?.window_width ?? 350,
+            window_height: splitFilePayload?.window_height ?? 550,
         });
 
-        const payload = JSON.stringify(newSplitFilePayload);
-        await Dispatch(Command.SUBMIT, payload);
+        await Dispatch(Command.SUBMIT, JSON.stringify(payload));
     };
-
-    const moveSegmentUp = (id: string) => {
-        setSegments((prev) => {
-            const root = cloneSegments(prev);
-            const found = findNodeMutable(root, id);
-            if (!found) return prev;
-
-            const { siblings, index } = found;
-            if (index <= 0) return prev;
-
-            const tmp = siblings[index - 1];
-            siblings[index - 1] = siblings[index];
-            siblings[index] = tmp;
-
-            return root;
-        });
-    };
-
-    const moveSegmentDown = (id: string) => {
-        setSegments((prev) => {
-            const root = cloneSegments(prev);
-            const found = findNodeMutable(root, id);
-            if (!found) return prev;
-
-            const { siblings, index } = found;
-            if (index >= siblings.length - 1) return prev;
-
-            const tmp = siblings[index + 1];
-            siblings[index + 1] = siblings[index];
-            siblings[index] = tmp;
-
-            return root;
-        });
-    };
-
-    const groupIntoPreviousSibling = (id: string) => {
-        setSegments((prev) => {
-            const root = cloneSegments(prev);
-            const found = findNodeMutable(root, id);
-            if (!found) return prev;
-
-            const { siblings, index } = found;
-            if (index <= 0) return prev;
-
-            const node = siblings[index];
-            const prevNode = siblings[index - 1];
-
-            siblings.splice(index, 1);
-
-            const prevChildren = prevNode.children ?? [];
-            prevNode.children = [...prevChildren, node];
-
-            return root;
-        });
-    };
-
-    const ungroupToTopLevel = (id: string) => {
-        setSegments((prev) => {
-            const root = cloneSegments(prev);
-            const found = findNodeMutable(root, id);
-            if (!found) return prev;
-
-            const { siblings, index, parents } = found;
-            if (parents.length === 0) return prev;
-
-            const node = siblings[index];
-            siblings.splice(index, 1);
-
-            const topAncestor = parents[0].node;
-            const topIndex = root.findIndex((s) => s.id === topAncestor.id);
-            const insertAt = topIndex >= 0 ? topIndex + 1 : root.length;
-
-            root.splice(insertAt, 0, node);
-
-            return root;
-        });
-    };
-
-    function updateSegmentTimes(id: string, average: number, pb: number) {
-        function update(list: SegmentPayload[]): SegmentPayload[] {
-            return list.map((seg) => {
-                if (seg.id === id) {
-                    return {
-                        ...seg,
-                        average,
-                        pb,
-                    };
-                }
-
-                return {
-                    ...seg,
-                    children: update(seg.children ?? []),
-                };
-            });
-        }
-
-        setSegments((prev) => update(prev));
-    }
-    const gameAutocompleteRef = React.useRef<HTMLDivElement>(null);
-    const categoryAutocompleteRef = React.useRef<HTMLDivElement>(null);
-
-    useClickOutside(gameAutocompleteRef, () => setGameActive(false));
-    useClickOutside(categoryAutocompleteRef, () => setCategoryActive(false));
 
     const longestGameWidth = React.useMemo(() => {
         const canvas = document.createElement("canvas");
         const ctx = canvas.getContext("2d");
-        if (!ctx) return 250;
+
+        if (!ctx) {
+            return 250;
+        }
 
         ctx.font = getComputedStyle(document.body).font;
 
-        return Math.max(150, ...games.map((m) => ctx.measureText(m.name).width + 10));
+        return Math.max(150, ...games.map((g) => ctx.measureText(g.name).width + 10));
     }, [games]);
 
     const longestCategoryWidth = React.useMemo(() => {
         const canvas = document.createElement("canvas");
         const ctx = canvas.getContext("2d");
-        if (!ctx) return 150;
+
+        if (!ctx) {
+            return 150;
+        }
 
         ctx.font = getComputedStyle(document.body).font;
 
         return Math.max(150, ...categories.map((c) => ctx.measureText(c.name).width + 10));
     }, [categories]);
 
-    /**
-     * renderRows arguments:
-     * - depth: indent depth
-     * - inheritedGroupShade: shading applied because this row is a direct child of a grouped parent
-     */
     function renderRows(
         list: SegmentPayload[],
         depth: number,
         inheritedGroup: GroupCtx | null,
         isDirectChild: boolean,
-        totalAvg: number,
-        totalPB: number,
-    ): {
-        rows: React.ReactElement[];
-        totalAvg: number;
-        totalPB: number;
-    } {
+        totals: RunningTotals,
+    ): RenderResult {
         const rows: React.ReactElement[] = [];
+
+        let running = { ...totals };
 
         for (let i = 0; i < list.length; i++) {
             const segment = list[i];
+
             const hasChildren = (segment.children ?? []).length > 0;
 
-            // If THIS row is a group parent, it defines a new group color for itself + its direct children
-            const ownGroup: GroupCtx | null = hasChildren ? { bg: colorFromId(segment.id) } : null;
+            const displayAverage = showCumulativeTimes ? running.avg + segment.average : segment.average;
 
-            // Row styling:
-            // - Group parent row: use its own group color
-            // - Direct children of a group parent: use inherited group color
-            // - Otherwise: no group styling
-            const rowGroup: GroupCtx | null = ownGroup ?? (isDirectChild ? inheritedGroup : null);
+            const displayPB = showCumulativeTimes ? running.pb + segment.pb : segment.pb;
 
-            const rowStyle: React.CSSProperties | undefined = rowGroup
-                ? ({ ["--group-bg"]: rowGroup.bg } as React.CSSProperties)
-                : undefined;
+            const displayGold = showCumulativeTimes ? running.gold + segment.gold : segment.gold;
 
-            const inGroup = !!rowGroup;
-            const isGroupParentRow = !!ownGroup;
-            const isGroupChildRow = !ownGroup && isDirectChild && !!inheritedGroup;
-
-            const rowClassName = [
-                inGroup ? "seg-group" : "",
-                isGroupParentRow ? "seg-group-parent" : "",
-                isGroupChildRow ? "seg-group-child" : "",
-            ]
-                .filter(Boolean)
-                .join(" ");
-
-            const displayAverage = showCumulativeTimes ? totalAvg + segment.average : segment.average;
-
-            const displayPB = showCumulativeTimes ? totalPB + segment.pb : segment.pb;
+            const child = hasChildren
+                ? renderRows(segment.children ?? [], depth + 1, { bg: colorFromId(segment.id) }, true, running)
+                : null;
 
             rows.push(
-                <React.Fragment key={segment.id}>
-                    <tr className={rowClassName} style={rowStyle}>
-                        <td>
-                            <div style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: 6 }}>
-                                <IconButton
-                                    icon={faArrowUp}
-                                    tooltip="Move segment up"
-                                    onClick={() => moveSegmentUp(segment.id)}
-                                />
-                                <IconButton
-                                    icon={faArrowDown}
-                                    tooltip="Move segment down"
-                                    onClick={() => moveSegmentDown(segment.id)}
-                                />
-                                <IconButton
-                                    icon={faArrowUpFromBracket}
-                                    tooltip="Group under the segment above"
-                                    show={i !== 0}
-                                    onClick={() => groupIntoPreviousSibling(segment.id)}
-                                />
-                                <IconButton
-                                    icon={faArrowRightFromBracket}
-                                    tooltip="Remove from group (move to top level)"
-                                    show={depth > 0}
-                                    onClick={() => ungroupToTopLevel(segment.id)}
-                                />
-                            </div>
-                        </td>
-
-                        <td>
-                            <div
-                                style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: 8,
-                                }}
-                            >
-                                <input
-                                    id={`segment-icon-${segment.id}`}
-                                    type="file"
-                                    accept="image/*"
-                                    style={{ display: "none" }}
-                                    onChange={(e) => updateSegmentIcon(segment.id, e)}
-                                />
-
-                                {!segment.icon ? (
-                                    <img
-                                        src={addIcon}
-                                        alt="Choose image"
-                                        title="Choose image"
-                                        onClick={() => document.getElementById(`segment-icon-${segment.id}`)?.click()}
-                                        style={{
-                                            width: 24,
-                                            height: 24,
-                                            cursor: "pointer",
-                                            backgroundColor: "#fff",
-                                            border: "1px solid #666",
-                                            borderRadius: 2,
-                                            padding: 2,
-                                            boxSizing: "border-box",
-                                        }}
-                                    />
-                                ) : (
-                                    <>
-                                        <img
-                                            src={segment.icon}
-                                            alt=""
-                                            title="Choose a different image"
-                                            onClick={() =>
-                                                document.getElementById(`segment-icon-${segment.id}`)?.click()
-                                            }
-                                            style={{
-                                                width: 24,
-                                                height: 24,
-                                                objectFit: "contain",
-                                                border: "1px solid #666",
-                                                borderRadius: 2,
-                                                cursor: "pointer",
-                                            }}
-                                        />
-
-                                        <img
-                                            src={removeIcon}
-                                            alt="Clear image"
-                                            title="Clear image"
-                                            onClick={() =>
-                                                updateSegment(segment.id, (s) => ({
-                                                    ...s,
-                                                    icon: "",
-                                                }))
-                                            }
-                                            style={{
-                                                width: 24,
-                                                height: 24,
-                                                cursor: "pointer",
-                                                backgroundColor: "#fff",
-                                                border: "1px solid #666",
-                                                borderRadius: 2,
-                                                padding: 2,
-                                                boxSizing: "border-box",
-                                            }}
-                                        />
-                                    </>
-                                )}
-                            </div>
-                        </td>
-
-                        <td style={{ paddingLeft: depth * 20 }}>
-                            <input
-                                value={segment.name}
-                                onChange={(e) => updateSegmentName(segment.id, e.target.value)}
-                            />
-                        </td>
-
-                        <td>
-                            {!hasChildren && (
-                                <TimeRow
-                                    time={displayAverage}
-                                    onChange={(newAverage) => {
-                                        updateSegmentTimes(
-                                            segment.id,
-                                            showCumulativeTimes ? newAverage - totalAvg : newAverage,
-                                            segment.pb,
-                                        );
-                                    }}
-                                />
-                            )}
-                        </td>
-
-                        <td>
-                            {!hasChildren && (
-                                <TimeRow
-                                    time={displayPB}
-                                    onChange={(newPB) => {
-                                        updateSegmentTimes(
-                                            segment.id,
-                                            segment.average,
-                                            showCumulativeTimes ? newPB - totalPB : newPB,
-                                        );
-                                    }}
-                                />
-                            )}
-                        </td>
-
-                        <td>
-                            <IconButton icon={faFolder} tooltip="Add subsegment" onClick={() => addSegment(segment)} />
-                        </td>
-
-                        <td>
-                            <IconButton
-                                icon={faTrash}
-                                tooltip="Delete segment"
-                                onClick={() => deleteSegment(segment.id)}
-                            />
-                        </td>
-                    </tr>
-                </React.Fragment>,
+                <SegmentRow
+                    key={segment.id}
+                    segment={segment}
+                    depth={depth}
+                    index={i}
+                    inheritedGroup={inheritedGroup}
+                    isDirectChild={isDirectChild}
+                    displayAverage={displayAverage}
+                    displayPB={displayPB}
+                    displayGold={displayGold}
+                    onMoveUp={(id) => setSegments((prev) => moveSegmentUp(prev, id))}
+                    onMoveDown={(id) => setSegments((prev) => moveSegmentDown(prev, id))}
+                    onGroup={(id) => setSegments((prev) => groupIntoPreviousSibling(prev, id))}
+                    onUngroup={(id) => setSegments((prev) => ungroupToTopLevel(prev, id))}
+                    onDelete={deleteSegment}
+                    onAddChild={addSegment}
+                    onUpdate={updateSegment}
+                ></SegmentRow>,
             );
 
-            // Leaf segments contribute to running totals
             if (!hasChildren) {
-                totalAvg += segment.average;
-                totalPB += segment.pb;
+                running = {
+                    avg: running.avg + segment.average,
+                    pb: running.pb + segment.pb,
+                    gold: running.gold + segment.gold,
+                };
             }
 
-            // Children continue from current totals instead of restarting
-            if (hasChildren) {
-                const childResult = renderRows(segment.children, depth + 1, ownGroup, true, totalAvg, totalPB);
-
-                rows.push(...childResult.rows);
-
-                totalAvg = childResult.totalAvg;
-                totalPB = childResult.totalPB;
+            if (child) {
+                rows.push(...child.rows);
+                running = child.totals;
             }
         }
 
         return {
             rows,
-            totalAvg,
-            totalPB,
+            totals: running,
         };
     }
 
     return (
         <div className="container form-container">
             <h2>{editing ? "Editing Split File" : "New Split File"}</h2>
+
             <form id="split-form" noValidate>
                 <div className="row">
                     <label htmlFor="game_name">Game Name</label>
+
                     <div className="autocomplete" ref={gameAutocompleteRef}>
                         <input
                             value={gameName}
@@ -712,15 +391,20 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
                             }}
                             autoComplete="off"
                         />
+
                         {gameActive && games.length > 0 && (
-                            <ul className="autocomplete-list" style={{ width: `${Math.ceil(longestGameWidth)}px` }}>
+                            <ul
+                                className="autocomplete-list"
+                                style={{
+                                    width: `${Math.ceil(longestGameWidth)}px`,
+                                }}
+                            >
                                 {games.map((game) => (
                                     <li
                                         key={game.id}
                                         onMouseDown={() => {
                                             selectingGame.current = true;
-                                            console.log("Selected gameID: ", game.id);
-                                            console.log("Selected game: ", game.name);
+
                                             setGameName(game.name);
                                             setGameID(game.id);
 
@@ -732,7 +416,6 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
                                             setCategoryID("");
 
                                             setGameActive(false);
-                                            // setShowGames(false);
                                         }}
                                     >
                                         {game.name}
@@ -745,6 +428,7 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
 
                 <div className="row">
                     <label htmlFor="game_category">Category</label>
+
                     <div className="autocomplete" ref={categoryAutocompleteRef}>
                         <input
                             value={categoryName}
@@ -753,8 +437,14 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
                             onChange={(e) => setCategoryName(e.target.value)}
                             autoComplete="off"
                         />
+
                         {categoryActive && categories.length > 0 && (
-                            <ul className="autocomplete-list" style={{ width: `${Math.ceil(longestCategoryWidth)}px` }}>
+                            <ul
+                                className="autocomplete-list"
+                                style={{
+                                    width: `${Math.ceil(longestCategoryWidth)}px`,
+                                }}
+                            >
                                 {categories.map((category) => (
                                     <li
                                         key={category.id}
@@ -762,7 +452,6 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
                                             setCategoryName(category.name);
                                             setCategoryID(category.id);
                                             setCategoryActive(false);
-                                            // setShowCategories(false);
                                         }}
                                     >
                                         {category.name}
@@ -772,27 +461,38 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
                         )}
                     </div>
                 </div>
-
-                <div className="row" style={{ marginTop: 10, marginBottom: 10 }}>
+                <div
+                    className="row"
+                    style={{
+                        marginTop: 10,
+                        marginBottom: 10,
+                    }}
+                >
                     <label htmlFor="platform">Platform</label>
+
                     <select
-                        style={{ marginLeft: 10 }}
                         id="platform"
+                        disabled={platforms.length === 0}
                         value={platform}
                         onChange={(e) => setPlatform(e.target.value)}
                     >
-                        {platforms.map((p) => (
-                            <option key={p.id} value={p.name}>
-                                {p.name}
-                            </option>
-                        ))}
+                        {platforms.length === 0 ? (
+                            <option>Loading platforms...</option>
+                        ) : (
+                            platforms.map((platform) => (
+                                <option key={platform.id} value={platform.name}>
+                                    {platform.name}
+                                </option>
+                            ))
+                        )}
                     </select>
+
                     <div className="row">
                         <label htmlFor="skin">Skin</label>
 
                         <select
-                            style={{ marginLeft: 10 }}
                             id="skin"
+                            style={{ marginLeft: 10 }}
                             value={selectedSkin}
                             onChange={(e) => setSelectedSkin(e.target.value)}
                         >
@@ -807,24 +507,26 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
 
                 <div className="row">
                     <label htmlFor="runattempts">Attempts</label>
+
                     <input
-                        onChange={(e) => setAttempts(Number(e.target.value))}
-                        value={attempts ?? 0}
                         id="runattempts"
                         name="attempts"
                         inputMode="numeric"
+                        value={attempts}
+                        onChange={(e) => setAttempts(Number(e.target.value))}
                     />
                 </div>
 
                 <div className="row">
-                    <label htmlFor="offset">Start Offset (milliseconds)</label>
+                    <label htmlFor="offsetMS">Start Offset (milliseconds)</label>
+
                     <input
-                        onChange={(e) => handleOffsetChange(e.target.value)}
                         id="offsetMS"
                         name="offsetMS"
                         type="text"
                         autoComplete="off"
                         value={offsetText}
+                        onChange={(e) => handleOffsetChange(e.target.value)}
                     />
                 </div>
 
@@ -837,43 +539,91 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
                         marginBottom: 20,
                     }}
                 >
-                    <button onClick={() => addSegment(null)} type="button">
+                    <button type="button" onClick={() => addSegment(null)}>
                         Add Segment
                     </button>
 
                     <button type="button" onClick={() => setShowCumulativeTimes((v) => !v)}>
-                        {showCumulativeTimes ? "Cumulative Times" : "Segment Times"}
+                        {showCumulativeTimes ? "Show Segment Times" : "Show Cumulative Times"}
                     </button>
                 </div>
 
                 <div className="datagrid-container">
                     <div className="datagrid">
-                        {segments && segments.length > 0 && (
-                            <table cellSpacing={0} className="datagrid" id="tbl-segments">
+                        {segments.length > 0 && (
+                            <table id="tbl-segments" className="datagrid" cellSpacing={0}>
                                 <thead>
                                     <tr>
                                         <th style={{ width: "5%" }}>#</th>
-                                        <th style={{ width: "12%" }}>Icon</th>
-                                        <th style={{ width: "50%" }}>Segment Name</th>
-                                        <th>
-                                            Average Time <small>(HH:MM:SS.ccc)</small>
+
+                                        <th
+                                            style={{
+                                                width: "12%",
+                                            }}
+                                        >
+                                            Icon
                                         </th>
-                                        <th>
-                                            Personal Best <small>(HH:MM:SS.ccc)</small>
+
+                                        <th
+                                            style={{
+                                                width: "45%",
+                                            }}
+                                        >
+                                            Segment Name
                                         </th>
-                                        <th style={{ width: "5%" }}>Add Subsegment</th>
-                                        <th style={{ width: "5%" }}></th>
+
+                                        <th>
+                                            Average Time
+                                            <small>(HH:MM:SS.ccc)</small>
+                                        </th>
+
+                                        <th>
+                                            Personal Best
+                                            <small>(HH:MM:SS.ccc)</small>
+                                        </th>
+
+                                        <th>
+                                            Gold
+                                            <small>(HH:MM:SS.ccc)</small>
+                                        </th>
+
+                                        <th
+                                            style={{
+                                                width: "5%",
+                                            }}
+                                        >
+                                            Add
+                                        </th>
+
+                                        <th
+                                            style={{
+                                                width: "5%",
+                                            }}
+                                        />
                                     </tr>
                                 </thead>
-                                <tbody>{renderRows(segments, 0, null, false, 0, 0).rows}</tbody>
+
+                                <tbody>
+                                    {
+                                        renderRows(segments, 0, null, false, {
+                                            avg: 0,
+                                            pb: 0,
+                                            gold: 0,
+                                        }).rows
+                                    }
+                                </tbody>
                             </table>
                         )}
                     </div>
                 </div>
-
                 <hr />
 
-                <div id="expoter" style={{ display: editing ? "block" : "none" }}>
+                <div
+                    id="exporter"
+                    style={{
+                        display: editing ? "block" : "none",
+                    }}
+                >
                     <button
                         onClick={async (e) => {
                             e.preventDefault();
@@ -885,9 +635,10 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
                 </div>
 
                 <div className="actions">
-                    <button onClick={saveSplitFile} type="submit" className="primary">
+                    <button className="primary" type="submit" onClick={saveSplitFile}>
                         Save
                     </button>
+
                     <button
                         type="button"
                         onClick={async () => {

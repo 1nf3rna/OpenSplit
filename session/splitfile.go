@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/zellydev-games/opensplit/logger"
 )
 
 type SplitFile struct {
@@ -22,10 +21,11 @@ type SplitFile struct {
 	Runs     []Run
 	PB       *Run
 
-	SOB      time.Duration
-	Attempts int
-	Offset   time.Duration
-	Platform string
+	SOB                time.Duration
+	Attempts           int
+	Offset             time.Duration
+	Platform           string
+	RollingAverageRuns int
 
 	WR WorldRecord
 
@@ -58,83 +58,153 @@ func (s *SplitFile) BuildStats() {
 	}
 
 	leafSegments := getLeafSegments(s.Segments, nil)
-	logger.Infof("stats", "building stats for %d segments", len(leafSegments))
-
-	// edge case: no leaf segments
 	if len(leafSegments) == 0 {
 		s.SOB = 0
 		s.PB = nil
-		logger.Warn("stats", "no leaf segments found")
 		return
 	}
 
-	golds, sumMap, countMap := s.perSegmentAggregates(s.Runs)
+	golds := s.computeGolds()
+	averages := s.computeRollingAverages()
 
-	// Reset SOB
-	var SOB time.Duration
+	var sob time.Duration
 
 	for _, leaf := range leafSegments {
 		id := leaf.ID
 
-		// GOLD
 		if gold, ok := golds[id]; ok {
 			leaf.Gold = gold
-			SOB += gold
-		} else {
-			leaf.Gold = -1
+			sob += gold
+		} else if leaf.Gold <= 0 {
+			leaf.Gold = 0
 		}
 
-		// AVERAGE
-		if sum, ok := sumMap[id]; ok {
-			if cnt := countMap[id]; cnt > 0 {
-				leaf.Average = sum / time.Duration(cnt)
-			} else {
-				leaf.Average = -1
-			}
-		} else {
-			leaf.Average = -1
+		if avg, ok := averages[id]; ok {
+			leaf.Average = avg
+		} else if leaf.Average <= 0 {
+			leaf.Average = 0
 		}
 	}
 
-	PB, _, err := getPB(s.Runs)
+	pb, _, err := getPB(s.Runs)
 	if err != nil {
-		s.PB = nil  // no PB available
-		s.SOB = SOB // SOB still valid
+		s.PB = nil
+		s.SOB = sob
 		return
 	}
 
-	for i, leaf := range leafSegments {
-		for _, split := range PB.Splits {
-			if split.SplitSegmentID == leaf.ID {
-				leaf.PB = split.CurrentDuration
-				leafSegments[i] = leaf
-				break
-			}
+	s.PB = pb
+	s.SOB = sob
+
+	for _, leaf := range leafSegments {
+		if leaf.PB > 0 {
+			continue
+		}
+
+		if split, ok := pb.Splits[leaf.ID]; ok {
+			leaf.PB = split.CurrentDuration
 		}
 	}
-
-	s.PB = PB
-	s.SOB = SOB
-	logger.Infof("stats", "stats built: PB: %f SOB:%f", s.PB.TotalTime.Seconds(), s.SOB.Seconds())
 }
 
-func (s *SplitFile) perSegmentAggregates(runs []Run) (golds map[uuid.UUID]time.Duration, sums map[uuid.UUID]time.Duration, counts map[uuid.UUID]int) {
-	golds = make(map[uuid.UUID]time.Duration)
-	sums = make(map[uuid.UUID]time.Duration)
-	counts = make(map[uuid.UUID]int)
+func (s *SplitFile) computeGolds() map[uuid.UUID]time.Duration {
+	golds := make(map[uuid.UUID]time.Duration)
 
-	for _, run := range runs {
-		for segmentID, sp := range run.Splits {
-			if cur, ok := golds[segmentID]; !ok || sp.CurrentDuration < cur {
-				golds[segmentID] = sp.CurrentDuration
+	for _, run := range s.Runs {
+		if !run.Completed {
+			continue
+		}
+
+		for id, split := range run.Splits {
+			if cur, ok := golds[id]; !ok || split.CurrentDuration < cur {
+				golds[id] = split.CurrentDuration
 			}
-
-			sums[segmentID] += sp.CurrentDuration
-			counts[segmentID]++
 		}
 	}
 
-	return golds, sums, counts
+	return golds
+}
+
+func (s *SplitFile) rollingRuns() []Run {
+	var completed []Run
+
+	for _, run := range s.Runs {
+		if !run.Completed {
+			continue
+		}
+
+		if run.SplitFileVersion != s.Version {
+			continue
+		}
+
+		completed = append(completed, run)
+	}
+
+	if len(completed) == 0 {
+		return nil
+	}
+
+	window := s.RollingAverageRuns
+	if window <= 0 {
+		window = 10
+	}
+
+	if s.Version == 0 && len(completed) < window {
+		return completed
+	}
+
+	if len(completed) <= window {
+		return completed
+	}
+
+	return completed[len(completed)-window:]
+}
+
+func (s *SplitFile) computeRollingAverages() map[uuid.UUID]time.Duration {
+	runs := s.rollingRuns()
+
+	sums := make(map[uuid.UUID]time.Duration)
+	counts := make(map[uuid.UUID]int)
+
+	for _, run := range runs {
+		for id, split := range run.Splits {
+			sums[id] += split.CurrentDuration
+			counts[id]++
+		}
+	}
+
+	averages := make(map[uuid.UUID]time.Duration)
+
+	for id, sum := range sums {
+		if counts[id] == 0 {
+			continue
+		}
+
+		averages[id] = sum / time.Duration(counts[id])
+	}
+
+	return averages
+}
+
+func (s *SplitFile) UpdatePBSegments(pb *Run) {
+	if pb == nil {
+		return
+	}
+
+	leafSegments := getLeafSegments(s.Segments, nil)
+
+	for _, leaf := range leafSegments {
+		split, ok := pb.Splits[leaf.ID]
+		if !ok {
+			continue
+		}
+
+		if leaf.PB <= 0 || split.CurrentDuration < leaf.PB {
+			leaf.PB = split.CurrentDuration
+		}
+	}
+
+	s.PB = pb
 }
 
 func DeepCopySplitFile(inFile *SplitFile) SplitFile {
@@ -161,10 +231,11 @@ func DeepCopySplitFile(inFile *SplitFile) SplitFile {
 		Runs:     runs,
 		PB:       pbRun,
 
-		SOB:      inFile.SOB,
-		Attempts: inFile.Attempts,
-		Offset:   inFile.Offset,
-		Platform: inFile.Platform,
+		SOB:                inFile.SOB,
+		Attempts:           inFile.Attempts,
+		Offset:             inFile.Offset,
+		Platform:           inFile.Platform,
+		RollingAverageRuns: inFile.RollingAverageRuns,
 
 		WR: inFile.WR,
 

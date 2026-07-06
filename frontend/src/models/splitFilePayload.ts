@@ -8,7 +8,7 @@ export default class SplitFilePayload {
     speedrun_game_id = "";
     game_category: string = "";
     speedrun_game_category_id = "";
-    version: number = 1;
+    version: number = 0;
 
     selected_skin?: string;
 
