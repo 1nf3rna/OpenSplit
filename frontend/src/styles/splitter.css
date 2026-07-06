@@ -78,7 +78,7 @@
         border-right: 0;
     }
 
-    #splitName {
+    .splitName {
         width: var(--segment-name-width);
     }
 
