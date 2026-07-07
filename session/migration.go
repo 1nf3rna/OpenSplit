@@ -4,10 +4,14 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/zellydev-games/opensplit/logger"
 )
 
+// MergeStatistics copies statistics from an older split file into a newer one
+// when segment IDs match.
 func MergeStatistics(oldFile, newFile *SplitFile) {
 	if oldFile == nil || newFile == nil {
+		logger.Warn(logModule, "MergeStatistics called with nil split file")
 		return
 	}
 
@@ -44,6 +48,8 @@ func mergeSegments(newSegments []Segment, old map[uuid.UUID]*Segment) {
 	}
 }
 
+// UpgradeSplitFile migrates run history and statistics from an older split file
+// to a newer version.
 func UpgradeSplitFile(oldFile, newFile *SplitFile) {
 	MergeStatistics(oldFile, newFile)
 

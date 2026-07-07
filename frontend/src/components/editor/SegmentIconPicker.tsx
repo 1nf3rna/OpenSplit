@@ -1,3 +1,10 @@
+/**
+ * SegmentIconPicker allows a segment icon to be selected, replaced, or removed.
+ *
+ * Images are stored as base64 data URLs so they can be embedded directly into
+ * the split file without requiring external asset management.
+ */
+
 import React from "react";
 
 import addIcon from "../../assets/images/add.png";
@@ -30,6 +37,9 @@ const previewStyle: React.CSSProperties = {
 export default function SegmentIconPicker({ icon, onChange }: SegmentIconPickerProps) {
     const inputRef = React.useRef<HTMLInputElement>(null);
 
+    /**
+     * Reads the selected image and converts it to a base64 data URL.
+     */
     const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
 

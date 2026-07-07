@@ -4,16 +4,19 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"sort"
 	"time"
+
+	"github.com/zellydev-games/opensplit/logger"
 )
 
+// PlatformResult is the frontend-friendly representation of the platforms.
 type PlatformResult struct {
 	Data []Platforms `json:"data"`
 }
 
+// Platforms describes a speedrun.com platform.
 type Platforms struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
@@ -34,7 +37,10 @@ func (s *Service) fetchPlatforms() (PlatformResult, error) {
 				pageSize,
 				offset,
 			)
-			log.Println(endpoint)
+			logger.Debugf(logModule,
+				"GET %s",
+				endpoint,
+			)
 
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
@@ -53,7 +59,7 @@ func (s *Service) fetchPlatforms() (PlatformResult, error) {
 			}
 			defer func() {
 				if err := resp.Body.Close(); err != nil {
-					log.Printf("error closing response body: %v", err)
+					logger.Errorf(logModule, "error closing response body: %v", err)
 				}
 			}()
 
@@ -75,7 +81,11 @@ func (s *Service) fetchPlatforms() (PlatformResult, error) {
 		}
 	}
 
-	log.Println(all)
+	logger.Debugf(logModule,
+		"received %d platforms: %v",
+		len(all.Data),
+		all,
+	)
 	return all, nil
 }
 

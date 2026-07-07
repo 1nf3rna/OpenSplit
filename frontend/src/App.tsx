@@ -11,6 +11,7 @@ import { Command } from "./models/command";
 import { ConfigPayload } from "./models/configPayload";
 import SessionPayload from "./models/sessionPayload";
 import SplitFilePayload from "./models/splitFilePayload";
+import { log } from "./utils/logger";
 
 export enum AppView {
     Welcome = "welcome",
@@ -51,6 +52,12 @@ function ViewRouter({ model }: ViewRouterProps) {
     }
 }
 
+/**
+ * Root application component.
+ *
+ * Initializes global event bindings, skin loading, window tracking,
+ * and routes between the various application views.
+ */
 export default function App() {
     const [viewModel, setViewModel] = React.useState<AppViewModel>({ view: AppView.Welcome });
     useDetectWindowChange();
@@ -59,10 +66,12 @@ export default function App() {
 
     useEffect(() => {
         // get the initial skin
+        log.info("[App] Loading initial skin");
         GetSkinAddress().then((a) => changeSkin(a));
 
         // subscribe to future updates
         return EventsOn("skin:update", (address: string) => {
+            log.info("[App] Skin updated:", address);
             changeSkin(address);
         });
     }, []);
@@ -112,7 +121,7 @@ function useDetectWindowChange() {
             const { w, h } = await WindowGetSize();
 
             if (x != lastX || y != lastY || h != lastH || w != lastW) {
-                console.log("window dimensions have changed, requesting save");
+                console.debug("[App] Window position changed", { x, y, w, h });
                 lastX = x;
                 lastY = y;
                 lastW = w;
@@ -131,7 +140,7 @@ function useDetectWindowChange() {
 function useAppEventBindings(setViewModel: React.Dispatch<React.SetStateAction<AppViewModel>>) {
     useEffect(() => {
         const unsubViewModel = EventsOn("ui:model", (nextModel: AppViewModel) => {
-            console.log("[UI MODEL]", nextModel.view, nextModel);
+            log.info("[App] UI switched to", nextModel.view);
             setViewModel(nextModel);
         });
 
@@ -156,10 +165,12 @@ function useAppEventBindings(setViewModel: React.Dispatch<React.SetStateAction<A
 
 function useWindowFocus() {
     const f = async () => {
+        log.debug("[App] Window focused");
         await Dispatch(Command.FOCUS, "true");
     };
 
     const uf = async () => {
+        log.debug("[App] Window lost focus");
         await Dispatch(Command.FOCUS, "false");
     };
 

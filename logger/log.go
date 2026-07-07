@@ -1,5 +1,8 @@
 package logger
 
+// Package logger provides a lightweight wrapper around slog that supports
+// multiple handlers and a simplified logging API for OpenSplit components.
+
 import (
 	"context"
 	"fmt"
@@ -10,6 +13,7 @@ import (
 
 var log = new(openSplitLog)
 
+// AddHandler registers an slog handler that will receive all future log records.
 func AddHandler(h slog.Handler) {
 	log.handlers = append(log.handlers, h)
 }
@@ -46,6 +50,7 @@ func Errorf(module string, s string, opts ...any) {
 	handle(log, module, fmt.Sprintf(s, opts...), slog.LevelError)
 }
 
+// openSplitLog maintains the registered handlers used for log dispatch.
 type openSplitLog struct {
 	context  context.Context
 	handlers []slog.Handler

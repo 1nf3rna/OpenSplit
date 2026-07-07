@@ -13,6 +13,7 @@ import (
 const logModule = "session"
 const splitDebounce = 120 * time.Millisecond
 
+// SplitResult describes the outcome of a Split operation.
 type SplitResult int
 
 const (
@@ -23,6 +24,7 @@ const (
 	SplitReset
 )
 
+// State represents the lifecycle state of a timing session.
 type State byte
 
 const (
@@ -184,6 +186,11 @@ func (s *Service) ToggleWorldRecordDisplay() {
 		return
 	}
 
+	logger.Debugf(
+		logModule,
+		"world record display=%v",
+		s.loadedSplitFile.WR.Show,
+	)
 	s.loadedSplitFile.WR.Show = !s.loadedSplitFile.WR.Show
 }
 
@@ -421,6 +428,7 @@ func (s *Service) CloseRun() {
 	s.mu.Lock()
 	s.currentRun = nil
 	s.runtimeOffsetOverride = nil
+	logger.Debug(logModule, "runtime offset override cleared")
 	s.mu.Unlock()
 	logger.Info(logModule, "run closed, resetting session")
 	s.resetLocked()
@@ -507,7 +515,12 @@ func (s *Service) PersistRunToSession() {
 
 	s.loadedSplitFile.RebuildStatistics()
 
-	logger.Info(logModule, "run persisted")
+	logger.Infof(
+		logModule,
+		"run persisted total=%d attempts=%d",
+		s.currentRun.TotalTime.Milliseconds(),
+		s.loadedSplitFile.Attempts,
+	)
 }
 
 func (s *Service) debounced() bool {
@@ -606,5 +619,6 @@ func (s *Service) sendUpdate() {
 	select {
 	case s.sessionUpdateChannel <- s:
 	default:
+		logger.Debug(logModule, "session update skipped")
 	}
 }

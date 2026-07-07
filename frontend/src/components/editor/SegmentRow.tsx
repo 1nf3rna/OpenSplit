@@ -1,3 +1,10 @@
+/**
+ * Renders a single segment row within the split editor.
+ *
+ * Supports nested segment groups, editing timing values,
+ * grouping operations, icons, and child segment creation.
+ */
+
 import {
     faArrowDown,
     faArrowRightFromBracket,
@@ -58,6 +65,8 @@ export default function SegmentRow({
 
     const ownGroup = hasChildren ? { bg: colorFromId(segment.id) } : null;
 
+    // Group parent gets its own color.
+    // Direct children inherit the parent's color.
     const rowGroup = ownGroup ?? (isDirectChild ? inheritedGroup : null);
 
     const rowStyle = rowGroup

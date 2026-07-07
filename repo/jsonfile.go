@@ -124,6 +124,11 @@ func (j *JsonFile) SaveSplitFile(payload []byte, identifier string, export bool)
 		logger.Errorf(logModule, "failed to save split file: %s", err.Error())
 		return err
 	}
+	logger.Infof(
+		logModule,
+		"saved %q",
+		workingFileName,
+	)
 	return err
 }
 
@@ -181,6 +186,11 @@ func (j *JsonFile) LoadSplitFile() ([]byte, error) {
 		return nil, err
 	}
 
+	logger.Infof(
+		logModule,
+		"loaded %q",
+		filename,
+	)
 	return data, nil
 }
 
@@ -203,6 +213,10 @@ func (j *JsonFile) SaveConfig(configServicePayload []byte) error {
 		logger.Errorf(logModule, "failed to save split file: %s", err.Error())
 		return err
 	}
+	logger.Info(
+		logModule,
+		"saved configuration",
+	)
 	return err
 }
 
@@ -228,6 +242,10 @@ func (j *JsonFile) LoadConfig() ([]byte, error) {
 		logger.Errorf(logModule, "failed to load OpenSplit config: %s", err.Error())
 		return nil, err
 	}
+	logger.Info(
+		logModule,
+		"loaded configuration",
+	)
 	return data, err
 }
 
@@ -249,5 +267,10 @@ func (j *JsonFile) getDefaultDirectory() (string, error) {
 		}
 	}
 
+	logger.Debugf(
+		logModule,
+		"default directory %q",
+		defaultDirectory,
+	)
 	return defaultDirectory, nil
 }

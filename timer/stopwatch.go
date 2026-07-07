@@ -59,6 +59,9 @@ func (s *Stopwatch) IsRunning() bool {
 	return s.running
 }
 
+// Run starts the ticker processing loop.
+//
+// Run is automatically called during Startup.
 func (s *Stopwatch) Run() {
 	if s.ctx == nil {
 		logger.Error(logModule, "Run called before Startup in stopwatch")
@@ -131,7 +134,7 @@ func (s *Stopwatch) Reset(offset *time.Duration) {
 
 	select {
 	case s.timeUpdatedChannel <- s.currentTime:
-		logger.Infof(logModule,
+		logger.Debugf(logModule,
 			"sent timer update=%d",
 			s.currentTime.Milliseconds(),
 		)
@@ -201,16 +204,20 @@ func ParseStringToTime(s string) (time.Duration, error) {
 	return d, nil
 }
 
+// PayloadRawTimeToDuration converts milliseconds received from the frontend into a Duration.
 func PayloadRawTimeToDuration(ms int64) time.Duration {
 	return time.Duration(ms) * time.Millisecond
 }
 
+// tickOnce advances the stopwatch by processing a single ticker event.
+//
+// This method exists primarily to simplify unit testing.
 func (s *Stopwatch) tickOnce(now time.Time) {
 	s.mu.Lock()
 	if s.running {
 		s.currentTime = now.Sub(s.startTime)
 
-		logger.Infof(
+		logger.Debugf(
 			logModule,
 			"tick currentTime=%d",
 			s.currentTime.Milliseconds(),

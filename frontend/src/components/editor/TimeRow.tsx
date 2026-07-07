@@ -1,3 +1,10 @@
+/**
+ * TimeRow edits a duration using separate
+ * HH:MM:SS.cc fields.
+ *
+ * Values are converted to milliseconds whenever edited.
+ */
+
 import { forwardRef, useEffect, useImperativeHandle, useState } from "react";
 
 import { msToParts, partsToMS } from "../splitter/Timer";
@@ -34,6 +41,9 @@ export const TimeRow = forwardRef<Handle, TimeRowProps>((props, ref) => {
         setCentis(String(p.centis));
     }, [props.time]);
 
+    /**
+     * Emits the current field values as milliseconds.
+     */
     const emitChange = (h = hours, m = minutes, s = seconds, c = centis) => {
         props.onChange?.(
             partsToMS({

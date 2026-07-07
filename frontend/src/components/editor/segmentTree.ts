@@ -6,6 +6,11 @@ type ParentRef = {
     index: number;
 };
 
+/**
+ * Adds a new child segment beneath the specified parent.
+ *
+ * Returns a new immutable tree.
+ */
 export function addChildRecursive(list: SegmentPayload[], parent: SegmentPayload): SegmentPayload[] {
     return list.map((item) => {
         if (item.id === parent.id) {
@@ -24,7 +29,12 @@ export function addChildRecursive(list: SegmentPayload[], parent: SegmentPayload
     });
 }
 
-// Clone to safely do in-place operations on the copy
+/**
+ * Deep clones the segment hierarchy.
+ *
+ * Mutable tree operations work on the clone so React state
+ * can remain immutable.
+ */
 export function cloneSegments(list: SegmentPayload[]): SegmentPayload[] {
     return (list ?? []).map((seg) => {
         return new SegmentPayload({
@@ -34,6 +44,14 @@ export function cloneSegments(list: SegmentPayload[]): SegmentPayload[] {
     });
 }
 
+/**
+ * Finds a node and returns mutable references to:
+ *   - the sibling array containing the node
+ *   - the node index
+ *   - every ancestor
+ *
+ * Used by move/group/ungroup operations.
+ */
 export function findNodeMutable(
     siblings: SegmentPayload[],
     id: string,

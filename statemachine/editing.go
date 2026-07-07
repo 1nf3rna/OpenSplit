@@ -36,6 +36,8 @@ func (e *Editing) OnEnter() error {
 }
 
 func (e *Editing) OnExit() error { return nil }
+
+// Receive handles editor actions.
 func (e *Editing) Receive(c command.Command, payload *string) (dispatcher.DispatchReply, error) {
 	switch c {
 	case command.CANCEL:
@@ -51,17 +53,17 @@ func (e *Editing) Receive(c command.Command, payload *string) (dispatcher.Dispat
 		if err != nil {
 			return dispatcher.DispatchReply{Code: 2, Message: err.Error()}, err
 		}
-		logger.Errorf(logModule, "dto: %v", dto)
+		logger.Debugf(logModule, "dto: %v", dto)
 
 		domain, err := adapters.DTOSplitFileToDomain(dto)
 		if err != nil {
 			return dispatcher.DispatchReply{Code: 5, Message: err.Error()}, err
 		}
-		logger.Errorf(logModule, "domain: %v", domain)
+		logger.Debugf(logModule, "domain: %v", domain)
 
 		domain.RebuildStatistics()
 		dto = adapters.DomainSplitFileToDTO(domain)
-		logger.Errorf(logModule, "dto: %v", dto)
+		logger.Debugf(logModule, "dto: %v", dto)
 
 		err = machine.repoService.SaveSplitFile(dto)
 		if err != nil {
@@ -73,7 +75,7 @@ func (e *Editing) Receive(c command.Command, payload *string) (dispatcher.Dispat
 		if err != nil {
 			return dispatcher.DispatchReply{Code: 5, Message: err.Error()}, err
 		}
-		logger.Errorf(logModule, "split file: %v", sf)
+		logger.Debugf(logModule, "split file: %v", sf)
 
 		machine.sessionService.SetLoadedSplitFile(sf)
 		go machine.updateWorldRecord()

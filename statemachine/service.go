@@ -96,6 +96,7 @@ func NewMachine(runtimeProvider RuntimeProvider, repoService *repo.Service, sess
 
 // Startup is called by Wails.Run to pass in a context to use against Wails.platform
 func (s *Service) Startup(ctx context.Context) {
+	logger.Info(logModule, "starting state machine")
 	machine.ctx = ctx
 	s.unsubscribeFromWindowDimensionChanges = s.setupWindowDimensionListener()
 	machine.changeState(WELCOME, s.sessionService)
@@ -103,6 +104,7 @@ func (s *Service) Startup(ctx context.Context) {
 
 // AttachHotkeyProvider allows us to receive Dispatch payloads from the given HotkeyProvider
 func (s *Service) AttachHotkeyProvider(provider HotkeyProvider) {
+	logger.Debug(logModule, "hotkey provider attached")
 	s.hotkeyProvider = provider
 }
 
@@ -210,7 +212,12 @@ func (s *Service) updateWorldRecord() {
 		return
 	}
 
-	fmt.Printf("%#v\n", sf)
+	logger.Debugf(
+		logModule,
+		"loaded splitfile: game=%q category=%q",
+		sf.GameID,
+		sf.CategoryID,
+	)
 
 	logger.Debug(logModule, "checking categoryID")
 	if sf.CategoryID == "" {
@@ -223,6 +230,11 @@ func (s *Service) updateWorldRecord() {
 		logger.Error(logModule, err.Error())
 		return
 	}
+	logger.Infof(
+		logModule,
+		"loaded WR for category %s",
+		sf.CategoryID,
+	)
 
 	sf.WR = s.speedrunService.ToWorldRecord(wr)
 
@@ -245,10 +257,13 @@ func (s *Service) saveSplitFile() error {
 		return errors.New(msg)
 	}
 	dto := adapters.DomainSplitFileToDTO(sf)
+
+	logger.Debug(logModule, "saving split file")
 	err := machine.repoService.SaveSplitFile(dto)
 	if err != nil {
 		return err
 	}
+	logger.Info(logModule, "split file saved")
 
 	machine.sessionService.ClearDirty()
 	return nil
@@ -304,10 +319,12 @@ func (s *Service) promptPartialRun() error {
 		}
 
 		if response == "Yes" {
+			logger.Info(logModule, "persisting partial run")
 			s.sessionService.PersistRunToSession()
 			return nil
 		}
 	}
+	logger.Debug(logModule, "discarding partial run")
 	return nil
 }
 
@@ -325,9 +342,11 @@ func (s *Service) promptDirtySave() error {
 		}
 
 		if response == "Yes" {
+			logger.Info(logModule, "persisting unsaved runs")
 			return s.saveSplitFile()
 		}
 	}
 
+	logger.Debug(logModule, "discarding unsaved runs")
 	return nil
 }

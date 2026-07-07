@@ -65,7 +65,7 @@ func DTOSplitFileToDomain(payload dto.SplitFile) (session.SplitFile, error) {
 	if payload.PB != nil {
 		domainPB, err := dtoRunToDomain(*payload.PB)
 		if err != nil {
-			logger.Error(logModule, "failed to get PB for split file")
+			logger.Errorf(logModule, "failed to get PB for split file: %v", err)
 			PB = nil
 		} else {
 			PB = &domainPB
@@ -76,6 +76,10 @@ func DTOSplitFileToDomain(payload dto.SplitFile) (session.SplitFile, error) {
 	fixedRuns := []dto.Run{}
 	for _, run := range payload.Runs {
 		if run.ID == uuid.Nil.String() {
+			logger.Warn(
+				logModule,
+				"discarding run with invalid UUID",
+			)
 			continue
 		}
 
@@ -107,7 +111,7 @@ func DTOSplitFileToDomain(payload dto.SplitFile) (session.SplitFile, error) {
 	newSplitFile.WindowHeight = payload.WindowHeight
 	newSplitFile.WindowWidth = payload.WindowWidth
 
-	logger.Infof(logModule,
+	logger.Debugf(logModule,
 		"DOMAIN GameID=%q CategoryID=%q",
 		newSplitFile.GameID,
 		newSplitFile.CategoryID,
@@ -122,7 +126,7 @@ func DTOSplitFileToDomain(payload dto.SplitFile) (session.SplitFile, error) {
 func JSONSplitFileToDTO(payload string) (dto.SplitFile, error) {
 	var sf dto.SplitFile
 	err := json.Unmarshal([]byte(payload), &sf)
-	logger.Infof(logModule,
+	logger.Debugf(logModule,
 		"DTO GameID=%q CategoryID=%q",
 		sf.GameID,
 		sf.CategoryID,
@@ -147,6 +151,10 @@ func checkSegmentIDs(segments []dto.Segment) {
 		if seg.ID == "" {
 			seg.ID = uuid.New().String()
 			segments[i] = seg
+			logger.Debug(
+				logModule,
+				"generated segment UUID",
+			)
 		}
 
 		if len(seg.Children) > 0 {

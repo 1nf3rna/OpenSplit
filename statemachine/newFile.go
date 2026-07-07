@@ -50,6 +50,7 @@ func (n *NewFile) Receive(c command.Command, payload *string) (dispatcher.Dispat
 				Message: "nil payload received",
 			}, nil
 		}
+		logger.Info(logModule, "creating new split file")
 		dto, err := adapters.JSONSplitFileToDTO(*payload)
 		if err != nil {
 			logger.Error(logModule, err.Error())
@@ -59,6 +60,8 @@ func (n *NewFile) Receive(c command.Command, payload *string) (dispatcher.Dispat
 		if err != nil {
 			return dispatcher.DispatchReply{Code: 4, Message: "failed to save dto: " + err.Error()}, err
 		}
+		logger.Infof(logModule,
+			"new split file saved")
 		_ = machine.skinProvider.SetSkin(dto.SelectedSkin, false)
 		sf, err := adapters.DTOSplitFileToDomain(dto)
 		if err != nil {

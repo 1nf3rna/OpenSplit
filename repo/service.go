@@ -95,6 +95,12 @@ func (s *Service) SaveSplitFile(splitFile dto.SplitFile) error {
 				if err == nil {
 					if newDomain.Version > existingDomain.Version {
 						session.UpgradeSplitFile(&existingDomain, &newDomain)
+						logger.Infof(
+							logModule,
+							"upgrading split file v%d -> v%d",
+							existingDomain.Version,
+							newDomain.Version,
+						)
 						newDomain.BuildStats()
 						splitFile = adapters.DomainSplitFileToDTO(newDomain)
 					}
@@ -133,27 +139,39 @@ func (s *Service) SaveSplitFile(splitFile dto.SplitFile) error {
 }
 
 func (s *Service) Export() error {
+	logger.Info(logModule,
+		"exporting cleaned split file",
+	)
 	sfBytes, err := s.repository.GetLoadedSplitFile()
 	if err != nil {
+		logger.Errorf(logModule, "Failed to get loaded split file: %v", err)
 		return err
 	}
 
 	sf, err := adapters.JSONSplitFileToDTO(string(sfBytes))
 	if err != nil {
+		logger.Errorf(logModule, "Failed to convert split file to domain object: %v", err)
 		return err
 	}
 
 	cleanDTO, err := adapters.CleanSplitFile(sf)
 	if err != nil {
+		logger.Errorf(logModule, "Failed to clean user data from split file: %v", err)
 		return err
 	}
 
 	cleanBytes, err := adapters.SplitFileToFrontEnd(cleanDTO)
 	if err != nil {
+		logger.Errorf(logModule, "Failed to convert clean split file to json: %v", err)
 		return err
 	}
 
 	defaultFileName := fmt.Sprintf("%s-%s-%s.osf", sf.Platform, sf.GameName, sf.GameCategory)
+	logger.Infof(
+		logModule,
+		"export complete: %s",
+		defaultFileName,
+	)
 	return s.repository.Export(cleanBytes, defaultFileName)
 }
 
@@ -200,6 +218,10 @@ func (s *Service) LoadConfig(c *config.Service) error {
 		return err
 	}
 
+	logger.Debug(
+		logModule,
+		"ensuring default key bindings",
+	)
 	newConfig.EnsureDefaultKeyBindings()
 
 	s.configLock.Lock()

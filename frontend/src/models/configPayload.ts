@@ -1,3 +1,7 @@
+/**
+ * User configuration synchronized with the backend.
+ */
+
 import { Command } from "../models/command";
 
 export type KeyInfo = {

@@ -9,6 +9,7 @@ import (
 	"github.com/zellydev-games/opensplit/logger"
 )
 
+// DirChangeTracker polls a directory tree for file changes.
 type DirChangeTracker struct {
 	m           sync.Mutex
 	root        string
@@ -22,7 +23,12 @@ func NewDirChangeTracker() *DirChangeTracker {
 	}
 }
 
+// Start begins monitoring a directory.
 func (t *DirChangeTracker) Start(rootDir string, callback func()) {
+	logger.Infof(logModule,
+		"watching directory %q",
+		rootDir,
+	)
 	t.root = rootDir
 	t.startupOnce.Do(func() {
 		go func() {
@@ -43,7 +49,12 @@ func (t *DirChangeTracker) Start(rootDir string, callback func()) {
 
 }
 
+// ChangeRoot changes the monitored root directory.
 func (t *DirChangeTracker) ChangeRoot(rootDir string) {
+	logger.Infof(logModule,
+		"changing watch root to %q",
+		rootDir,
+	)
 	t.m.Lock()
 	t.root = rootDir
 	t.m.Unlock()
@@ -82,6 +93,9 @@ func (t *DirChangeTracker) check() (bool, error) {
 	for path, mod := range current {
 		prev, ok := t.last[path]
 		if !ok || !mod.Equal(prev) {
+			logger.Debug(logModule,
+				"directory contents changed",
+			)
 			changed = true
 			break
 		}
@@ -91,6 +105,9 @@ func (t *DirChangeTracker) check() (bool, error) {
 	if !changed {
 		for path := range t.last {
 			if _, ok := current[path]; !ok {
+				logger.Debug(logModule,
+					"directory contents changed",
+				)
 				changed = true
 				break
 			}

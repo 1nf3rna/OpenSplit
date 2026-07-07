@@ -1,3 +1,15 @@
+/**
+ * Complete split file loaded from disk.
+ *
+ * Contains:
+ *  - segment tree
+ *  - historical runs
+ *  - PB
+ *  - WR metadata
+ *  - window state
+ *  - skin configuration
+ */
+
 import RunPayload from "./runPayload";
 import SegmentPayload from "./segmentPayload";
 import WorldRecord from "./worldRecord";

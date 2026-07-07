@@ -5,8 +5,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/zellydev-games/opensplit/logger"
 )
 
+// SplitFile contains a game's split definitions together with run history.
 type SplitFile struct {
 	ID           uuid.UUID
 	GameName     string
@@ -35,6 +37,7 @@ type SplitFile struct {
 	WindowWidth  int
 }
 
+// WorldRecord stores optional world record information displayed in the UI.
 type WorldRecord struct {
 	Show       bool
 	RunID      string
@@ -56,6 +59,11 @@ func (s *SplitFile) BuildStats() {
 	if s == nil {
 		return
 	}
+	logger.Debugf(
+		logModule,
+		"rebuilding statistics (%d runs)",
+		len(s.Runs),
+	)
 
 	leafSegments := getLeafSegments(s.Segments, nil)
 	if len(leafSegments) == 0 {
@@ -96,6 +104,12 @@ func (s *SplitFile) BuildStats() {
 	s.PB = pb
 	s.SOB = sob
 
+	logger.Debugf(
+		logModule,
+		"statistics rebuilt SOB=%d PB=%v",
+		s.SOB.Milliseconds(),
+		s.PB != nil,
+	)
 	for _, leaf := range leafSegments {
 		if leaf.PB > 0 {
 			continue
@@ -205,6 +219,10 @@ func (s *SplitFile) UpdatePBSegments(pb *Run) {
 	}
 
 	s.PB = pb
+	logger.Debug(
+		logModule,
+		"personal best updated",
+	)
 }
 
 func DeepCopySplitFile(inFile *SplitFile) SplitFile {

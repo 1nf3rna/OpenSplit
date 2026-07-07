@@ -24,6 +24,12 @@ type Service struct {
 }
 
 func NewService(splitFileDir string, skinsDir string) (*Service, chan *Service) {
+	logger.Debugf(
+		logModule,
+		"config initialized splitDir=%q skinsDir=%q",
+		splitFileDir,
+		skinsDir,
+	)
 	updateChannel := make(chan *Service)
 	return &Service{
 		SplitFileDir:         splitFileDir,
@@ -69,9 +75,11 @@ func (s *Service) CreateDefaultConfig() {
 }
 
 func (s *Service) sendUIBridgeUpdate() {
+	logger.Debug(logModule, "sending configuration update")
 	select {
 	case s.configUpdatedChannel <- s:
 	default:
+		logger.Debug(logModule, "configuration update skipped; UI not ready")
 	}
 }
 
@@ -94,6 +102,7 @@ func (s *Service) EnsureDefaultKeyBindings() {
 
 	for _, c := range defaults {
 		if _, ok := s.KeyConfig[c]; !ok {
+			logger.Debugf(logModule, "adding default binding for %v", c)
 			s.KeyConfig[c] = keyinfo.KeyData{}
 		}
 	}

@@ -14,6 +14,8 @@ import (
 
 const RecordingArmed = 10
 
+// Config manages the configuration editing state and temporary hotkey
+// recording.
 type Config struct {
 	mu             sync.Mutex
 	listeningFor   command.Command
@@ -28,6 +30,7 @@ func NewConfigState(previousState StateID) (*Config, error) {
 }
 
 func (c *Config) OnEnter() error {
+	logger.Debug(logModule, "entering config state")
 	bridge.EmitUIEvent(machine.runtimeProvider, bridge.AppViewModel{
 		View:   bridge.AppViewSettings,
 		Config: machine.configService,
@@ -39,6 +42,7 @@ func (c *Config) OnExit() error {
 	return nil
 }
 
+// Receive handles configuration commands originating from the frontend.
 func (c *Config) Receive(cmd command.Command, _ *string) (dispatcher.DispatchReply, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -89,6 +93,7 @@ func (c *Config) Receive(cmd command.Command, _ *string) (dispatcher.DispatchRep
 	}
 }
 
+// handleHotkey stores the newly recorded hotkey binding.
 func (c *Config) handleHotkey(data keyinfo.KeyData) {
 	if c.recordingArmed {
 		c.recordingArmed = false

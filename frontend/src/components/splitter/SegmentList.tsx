@@ -1,9 +1,22 @@
+/**
+ * Displays the active split list during a run.
+ *
+ * Features:
+ *  - Hierarchical segment display
+ *  - Expand/collapse parent segments
+ *  - Live timer updates
+ *  - Comparison against Average / PB / Sum of Best
+ *  - Automatic scrolling to the active split
+ *  - Parent aggregate timing and delta calculations
+ */
+
 import React, { JSX, useEffect, useMemo, useRef, useState } from "react";
 
 import { EventsOn } from "../../../wailsjs/runtime";
 import SegmentPayload from "../../models/segmentPayload";
 import SessionPayload from "../../models/sessionPayload";
 import SplitPayload from "../../models/splitPayload";
+import { log } from "../../utils/logger";
 import { CompareAgainst, Comparison } from "./Splitter";
 import { displayFormattedTimeParts, formatDuration, msToParts } from "./Timer";
 
@@ -12,6 +25,10 @@ type SplitListParameters = {
     comparison: Comparison;
 };
 
+/**
+ * Flattened representation of the segment tree.
+ * Used for rendering while preserving hierarchy information.
+ */
 type FlatSegment = {
     Segment: SegmentPayload;
     Depth: number;
@@ -19,11 +36,21 @@ type FlatSegment = {
     HasChildren: boolean;
 };
 
+/**
+ * Cached comparison targets for every leaf segment.
+ *
+ * cumulative:
+ *     Total expected time up to this split.
+ *
+ * individual:
+ *     Expected duration of this split alone.
+ */
 type Targets = {
     cumulative: Record<string, number>;
     individual: Record<string, number>;
 };
 
+// converts the recursive tree into a depth-first list
 function flattenSegments(segments: SegmentPayload[], depth: number = 0, parentId: string | null = null): FlatSegment[] {
     const flat: FlatSegment[] = [];
     for (const segment of segments) {
@@ -119,6 +146,12 @@ const getComparisonColumn = (
         </strong>
     );
 };
+
+/**
+ * Renders a single leaf segment row.
+ *
+ * Used by both completed and active segments.
+ */
 function segmentRow(
     segmentData: FlatSegment,
     split: SplitPayload | null,
@@ -187,6 +220,7 @@ type ActiveRowProps = {
     activeRowRef: React.RefObject<HTMLTableRowElement | null>;
 };
 
+// ActiveRow subscribes to timer:update so only the active row rerenders every timer tick rather than the entire table.
 function ActiveRow({ segmentData, cTarget, iTarget, previousCumulative, activeRowRef }: ActiveRowProps) {
     const [time, setTime] = useState(0);
 
@@ -243,7 +277,10 @@ export default function SegmentList({ sessionPayload, comparison }: SplitListPar
                 className = "complete";
 
                 const pb = sessionPayload.loaded_split_file.pb;
-                console.log(sessionPayload.loaded_split_file);
+                log.info("[SegmentList] Run completed", {
+                    pb: className.includes("pb"),
+                    totalSplits: sessionPayload.leaf_segments.length,
+                });
                 if (pb) {
                     const segments = sessionPayload.leaf_segments;
                     if (segments) {
@@ -259,8 +296,13 @@ export default function SegmentList({ sessionPayload, comparison }: SplitListPar
         } else {
             setCompleteClassName("");
         }
+        log.debug("[SegmentList] Loaded split file", {
+            game: sessionPayload.loaded_split_file?.game_name,
+            segments: sessionPayload.leaf_segments?.length,
+        });
     }, [sessionPayload]);
 
+    // Builds cached comparison targets whenever comparison mode changes.
     const targets = useMemo<Targets>(() => {
         let cumulative = 0;
         const results: Targets = { cumulative: {}, individual: {} };
@@ -359,6 +401,10 @@ export default function SegmentList({ sessionPayload, comparison }: SplitListPar
             setExpandedParents(new Set());
             return;
         }
+        log.debug("[SegmentList] Active segment", {
+            index: sessionPayload.current_segment_index,
+            id: activeLeaf.id,
+        });
 
         const ancestors = getAncestorIds(activeLeaf.id, parentById);
         setExpandedParents(new Set(ancestors));
@@ -381,6 +427,10 @@ export default function SegmentList({ sessionPayload, comparison }: SplitListPar
 
     const toggleParent = (parentId: string) => {
         setExpandedParents((prev) => {
+            log.debug("[SegmentList] Toggle parent", {
+                parentId,
+                expanded: !prev.has(parentId),
+            });
             const next = new Set(prev);
             if (next.has(parentId)) next.delete(parentId);
             else next.add(parentId);
