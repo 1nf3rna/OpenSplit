@@ -22,7 +22,7 @@ export default function Config({ configPayload }: ConfigParams) {
     const [rollingAvg, setRollingAvg] = useState<number>(configPayload.rolling_average_runs ?? DEFAULT_ROLLING_AVG);
 
     useEffect(() => {
-        WindowSetSize(700, 800);
+        WindowSetSize(700, 900);
 
         const loadSkins = async () => {
             const skins = await GetAvailableSkins();
