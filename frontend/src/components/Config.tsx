@@ -5,6 +5,7 @@ import { GetAvailableSkins, SetSkin } from "../../wailsjs/go/skin/Service";
 import { EventsOn, WindowSetSize } from "../../wailsjs/runtime";
 import { Command } from "../models/command";
 import { ConfigPayload, KeyInfo } from "../models/configPayload";
+import { log } from "../utils/logger";
 
 export type ConfigParams = {
     configPayload: ConfigPayload;
@@ -21,6 +22,24 @@ export default function Config({ configPayload }: ConfigParams) {
     const [rollingAvg, setRollingAvg] = useState<number>(configPayload.rolling_average_runs ?? DEFAULT_ROLLING_AVG);
 
     useEffect(() => {
+        WindowSetSize(700, 800);
+
+        const loadSkins = async () => {
+            const skins = await GetAvailableSkins();
+            log.debug("Loaded skins", skins);
+            setAvailableSkins(skins);
+        };
+
+        void loadSkins();
+
+        return EventsOn("config:update", (newConfigPayload: ConfigPayload) => {
+            log.info("Configuration updated", newConfigPayload);
+            setConfig(newConfigPayload);
+            setRecording(false);
+        });
+    }, []);
+
+    useEffect(() => {
         setRollingAvg(config.rolling_average_runs ?? DEFAULT_ROLLING_AVG);
     }, [config]);
 
@@ -30,27 +49,11 @@ export default function Config({ configPayload }: ConfigParams) {
         })();
     }, [selectedSkin]);
 
-    useEffect(() => {
-        (async () => {
-            const as = await GetAvailableSkins();
-            console.log(as);
-            setAvailableSkins(as);
-        })();
-    }, []);
-
-    useEffect(() => {
-        WindowSetSize(700, 800);
-        return EventsOn("config:update", (newConfigPayload: ConfigPayload) => {
-            console.log("received update from backend", newConfigPayload);
-            setConfig(newConfigPayload);
-            setRecording(false);
-        });
-    }, []);
-
+    // backend records the next keypress
     const armHotkey = async (command: Command) => {
         const reply = await Dispatch(command, null);
         if (reply.code == RECORDING_ARMED) {
-            console.log("backend confirms recording is armed");
+            log.debug("Hotkey recording armed");
             setRecording(true);
         }
     };
@@ -69,6 +72,7 @@ export default function Config({ configPayload }: ConfigParams) {
         return ret.trim() === "" ? "No Hotkey Assigned" : ret;
     };
 
+    // generated dynamically
     const displayHotkeyRows = () => {
         const commands: [Command, string][] = [
             [Command.SPLIT, "Split"],

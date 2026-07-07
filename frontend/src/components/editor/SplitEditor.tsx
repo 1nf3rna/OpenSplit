@@ -1,3 +1,13 @@
+/**
+ * SplitEditor is used for both:
+ *
+ *  - creating new split files
+ *  - editing existing split files
+ *
+ * It manages segment hierarchy editing, Speedrun.com metadata,
+ * skins, timing information, and export.
+ */
+
 import React, { useEffect, useState } from "react";
 
 import { Dispatch, ExportSplitFile } from "../../../wailsjs/go/dispatcher/Service";
@@ -89,51 +99,60 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
     useClickOutside(categoryAutocompleteRef, () => setCategoryActive(false));
 
     useEffect(() => {
+        WindowSetSize(1000, 900);
+        WindowCenter();
+
+        console.debug("Loaded split editor", splitFilePayload?.id);
+
         setSegments(cloneSegments(splitFilePayload?.segments ?? []));
-        const offset = splitFilePayload?.offset ?? 0;
-        setOffsetText(String(offset));
+        setOffsetText(String(splitFilePayload?.offset ?? 0));
+
+        const loadData = async () => {
+            const [skinsResult, platformsResult] = await Promise.allSettled([GetAvailableSkins(), Platforms()]);
+
+            if (skinsResult.status === "fulfilled") {
+                setAvailableSkins(skinsResult.value);
+            } else {
+                console.error("Unable to load skins", skinsResult.reason);
+            }
+
+            if (platformsResult.status === "fulfilled") {
+                setPlatforms(platformsResult.value);
+            } else {
+                console.error("Failed to load speedrun platforms", platformsResult.reason);
+            }
+        };
+
+        void loadData();
+    }, []);
+
+    useEffect(() => {
+        setSegments(cloneSegments(splitFilePayload?.segments ?? []));
+        setOffsetText(String(splitFilePayload?.offset ?? 0));
     }, [splitFilePayload]);
 
     useEffect(() => {
-        GetAvailableSkins().then((skins) => {
-            setAvailableSkins(skins);
-
-            if (splitFilePayload?.selected_skin) {
-                setSelectedSkin(splitFilePayload.selected_skin);
-            } else if (skins.length > 0) {
-                setSelectedSkin(skins[0]);
-            }
-        });
-    }, [splitFilePayload]);
+        if (splitFilePayload?.selected_skin) {
+            setSelectedSkin(splitFilePayload.selected_skin);
+        } else if (availableSkins.length > 0) {
+            setSelectedSkin(availableSkins[0]);
+        }
+    }, [splitFilePayload, availableSkins]);
 
     useEffect(() => {
         if (platforms.length === 0) return;
 
         const exists = platforms.some((p) => p.name === platform);
 
+        if (!editing && !platform) {
+            setPlatform(platforms[0].name);
+            return;
+        }
+
         if (!exists) {
             setPlatform(platforms[0].name);
         }
-    }, [platforms]);
-
-    useEffect(() => {
-        if (!editing && !platform && platforms.length > 0) {
-            setPlatform(platforms[0].name);
-        }
-    }, [platforms, editing]);
-
-    useEffect(() => {
-        async function loadPlatforms() {
-            try {
-                const result = await Platforms();
-                setPlatforms(result);
-            } catch (err) {
-                console.error("Unable to load platforms", err);
-            }
-        }
-
-        loadPlatforms();
-    }, []);
+    }, [platforms, platform, editing]);
 
     useEffect(() => {
         if (selectingGame.current) {
@@ -169,13 +188,11 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
             return;
         }
 
-        SearchCategories(gameID).then((result) => {
-            setCategories(result.data);
-        });
-    }, [gameID]);
+        const update = async () => {
+            const [categories] = await Promise.all([SearchCategories(gameID)]);
 
-    useEffect(() => {
-        async function updatePlatforms() {
+            setCategories(categories.data);
+
             const match = games.find((g) => g.id === gameID);
 
             if (match?.platforms.length) {
@@ -183,15 +200,10 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
             } else {
                 setPlatforms(await Platforms());
             }
-        }
+        };
 
-        updatePlatforms();
+        void update();
     }, [gameID, games]);
-
-    useEffect(() => {
-        WindowSetSize(1000, 900);
-        WindowCenter();
-    }, []);
 
     const handleOffsetChange = (value: string) => {
         if (/^-?\d*$/.test(value)) {
@@ -207,6 +219,9 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
         }
     };
 
+    /**
+     * Recursively updates a segment while preserving immutable state.
+     */
     function updateSegment(id: string, updater: (segment: SegmentPayload) => SegmentPayload) {
         function recurse(list: SegmentPayload[]): SegmentPayload[] {
             return list.map((segment) =>
@@ -234,6 +249,9 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
         in_game_time: 0,
     };
 
+    /**
+     * Builds a SplitFile payload and submits it to the backend.
+     */
     const saveSplitFile = async (e: React.MouseEvent<HTMLButtonElement>) => {
         e.preventDefault();
 
@@ -271,7 +289,12 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
             window_height: splitFilePayload?.window_height ?? 550,
         });
 
-        console.log("SEGMENTS BEFORE SAVE", JSON.stringify(payload));
+        console.debug("Saving split file", {
+            id: payload.id,
+            segments: payload.segments.length,
+            game: payload.game_name,
+            category: payload.game_category,
+        });
 
         await Dispatch(Command.SUBMIT, JSON.stringify(payload));
     };
@@ -302,6 +325,11 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
         return Math.max(150, ...categories.map((c) => ctx.measureText(c.name).width + 10));
     }, [categories]);
 
+    /**
+     * Renders the segment hierarchy.
+     *
+     * Also computes cumulative timing values when enabled.
+     */
     function renderRows(
         list: SegmentPayload[],
         depth: number,
