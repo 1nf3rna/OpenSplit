@@ -213,9 +213,9 @@ func (s *SplitFile) UpdatePBSegments(pb *Run) {
 			continue
 		}
 
-		if leaf.PB <= 0 || split.CurrentDuration < leaf.PB {
-			leaf.PB = split.CurrentDuration
-		}
+		// if leaf.PB <= 0 || split.CurrentDuration < leaf.PB {
+		leaf.PB = split.CurrentDuration
+		// }
 	}
 
 	s.PB = pb

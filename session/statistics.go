@@ -85,9 +85,9 @@ func (s *SplitFile) UpdatePB(pb *Run) {
 			continue
 		}
 
-		if seg.PB <= 0 || split.CurrentDuration < seg.PB {
-			seg.PB = split.CurrentDuration
-		}
+		// if seg.PB <= 0 || split.CurrentDuration < seg.PB {
+		seg.PB = split.CurrentDuration
+		// }
 	}
 
 	s.recalculateSOB()
