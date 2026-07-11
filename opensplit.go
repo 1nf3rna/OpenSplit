@@ -26,6 +26,7 @@ import (
 	"github.com/zellydev-games/opensplit/hotkeys"
 	"github.com/zellydev-games/opensplit/logger"
 	"github.com/zellydev-games/opensplit/platform"
+	"github.com/zellydev-games/opensplit/racetimegg"
 	"github.com/zellydev-games/opensplit/repo"
 	"github.com/zellydev-games/opensplit/session"
 	"github.com/zellydev-games/opensplit/skin"
@@ -132,9 +133,13 @@ func main() {
 			configUIBridge.StartUIPump()
 			skinBridge.StartUIPump()
 
-			// Start remote control
+			// Start autosplitter remote control
 			remoteControl := autosplitter.NewSocket(commandDispatcher, 6767)
 			go remoteControl.Listen()
+
+			// Start racetimeGG remote control
+			racetimeControl := racetimegg.NewSocket(commandDispatcher, 6768)
+			go racetimeControl.Listen()
 
 			err = skinService.Startup()
 			if err != nil {
