@@ -59,6 +59,7 @@ type Segment struct {
 	Gold     time.Duration
 	Average  time.Duration
 	PB       time.Duration
+	Icon     string
 	Children []Segment
 }
 

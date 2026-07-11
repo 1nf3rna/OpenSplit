@@ -22,10 +22,10 @@ type Service struct {
 	configUpdatedChannel chan<- *Service
 }
 
-func NewService(splitFileFir string, skinsDir string) (*Service, chan *Service) {
+func NewService(splitFileDir string, skinsDir string) (*Service, chan *Service) {
 	updateChannel := make(chan *Service)
 	return &Service{
-		SplitFileDir:         splitFileFir,
+		SplitFileDir:         splitFileDir,
 		SkinsDir:             skinsDir,
 		SpeedRunAPIBase:      "",
 		KeyConfig:            map[command.Command]keyinfo.KeyData{},

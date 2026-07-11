@@ -10,6 +10,8 @@ import React, { useEffect, useState } from "react";
 
 import { Dispatch, ExportSplitFile } from "../../../wailsjs/go/dispatcher/Service";
 import { GetAvailableSkins } from "../../../wailsjs/go/skin/Service";
+import addIcon from "../../assets/images/add.png";
+import removeIcon from "../../assets/images/remove.png";
 import { Platforms, SearchCategories, SearchGames } from "../../../wailsjs/go/speedrun/Service";
 import { WindowCenter, WindowSetSize } from "../../../wailsjs/runtime";
 import { Command } from "../../App";
@@ -215,6 +217,44 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
             setSegments((prev) => addChildRecursive(prev, parent));
         }
     };
+
+    const updateSegmentIcon = (id: string, event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) {
+            return;
+        }
+
+        const reader = new FileReader();
+
+        reader.onload = () => {
+            updateSegment(id, (segment) => ({
+                ...segment,
+                icon: reader.result as string,
+            }));
+        };
+
+        reader.readAsDataURL(file);
+
+        // allow selecting the same file again later
+        event.target.value = "";
+    };
+
+    function updateSegment(id: string, updater: (segment: SegmentPayload) => SegmentPayload) {
+        function updateRecursive(list: SegmentPayload[]): SegmentPayload[] {
+            return list.map((item) => {
+                if (item.id === id) {
+                    return updater(item);
+                }
+
+                return {
+                    ...item,
+                    children: updateRecursive(item.children ?? []),
+                };
+            });
+        }
+
+        setSegments((prev) => updateRecursive(prev));
+    }
 
     function updateSegmentName(id: string, name: string) {
         function updateRecursive(list: SegmentPayload[]): SegmentPayload[] {
@@ -498,6 +538,84 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
                             </div>
                         </td>
 
+                        <td>
+                            <div
+                                style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 8,
+                                }}
+                            >
+                                <input
+                                    id={`segment-icon-${segment.id}`}
+                                    type="file"
+                                    accept="image/*"
+                                    style={{ display: "none" }}
+                                    onChange={(e) => updateSegmentIcon(segment.id, e)}
+                                />
+
+                                {!segment.icon ? (
+                                    <img
+                                        src={addIcon}
+                                        alt="Choose image"
+                                        title="Choose image"
+                                        onClick={() => document.getElementById(`segment-icon-${segment.id}`)?.click()}
+                                        style={{
+                                            width: 24,
+                                            height: 24,
+                                            cursor: "pointer",
+                                            backgroundColor: "#fff",
+                                            border: "1px solid #666",
+                                            borderRadius: 2,
+                                            padding: 2,
+                                            boxSizing: "border-box",
+                                        }}
+                                    />
+                                ) : (
+                                    <>
+                                        <img
+                                            src={segment.icon}
+                                            alt=""
+                                            title="Choose a different image"
+                                            onClick={() =>
+                                                document.getElementById(`segment-icon-${segment.id}`)?.click()
+                                            }
+                                            style={{
+                                                width: 24,
+                                                height: 24,
+                                                objectFit: "contain",
+                                                border: "1px solid #666",
+                                                borderRadius: 2,
+                                                cursor: "pointer",
+                                            }}
+                                        />
+
+                                        <img
+                                            src={removeIcon}
+                                            alt="Clear image"
+                                            title="Clear image"
+                                            onClick={() =>
+                                                updateSegment(segment.id, (s) => ({
+                                                    ...s,
+                                                    icon: "",
+                                                }))
+                                            }
+                                            style={{
+                                                width: 24,
+                                                height: 24,
+                                                cursor: "pointer",
+                                                backgroundColor: "#fff",
+                                                border: "1px solid #666",
+                                                borderRadius: 2,
+                                                padding: 2,
+                                                boxSizing: "border-box",
+                                            }}
+                                        />
+                                    </>
+                                )}
+                            </div>
+                        </td>
+
                         <td style={{ paddingLeft: depth * 20 }}>
                             <input
                                 value={segment.name}
@@ -737,6 +855,7 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
                                 <thead>
                                     <tr>
                                         <th style={{ width: "5%" }}>#</th>
+                                        <th style={{ width: "12%" }}>Icon</th>
                                         <th style={{ width: "50%" }}>Segment Name</th>
                                         <th>
                                             Average Time <small>(HH:MM:SS.ccc)</small>

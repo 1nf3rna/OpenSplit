@@ -170,6 +170,7 @@ func domainSegmentToDTO(s session.Segment) dto.Segment {
 		Gold:     s.Gold.Milliseconds(),
 		Average:  s.Average.Milliseconds(),
 		PB:       s.PB.Milliseconds(),
+		Icon:     s.Icon,
 		Children: []dto.Segment{},
 	}
 
@@ -195,6 +196,7 @@ func dtoSegmentToDomain(dtoSeg dto.Segment) session.Segment {
 		Gold:    time.Duration(dtoSeg.Gold) * time.Millisecond,
 		Average: time.Duration(dtoSeg.Average) * time.Millisecond,
 		PB:      time.Duration(dtoSeg.PB) * time.Millisecond,
+		Icon:    dtoSeg.Icon,
 	}
 
 	// recursively convert children
