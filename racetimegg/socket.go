@@ -1,9 +1,11 @@
 package racetimegg
 
 import (
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"net"
+	"strconv"
 	"sync"
 
 	"github.com/zellydev-games/opensplit/command"
@@ -11,7 +13,7 @@ import (
 	"github.com/zellydev-games/opensplit/logger"
 )
 
-const logModule = "autosplitter"
+const logModule = "racetimegg"
 const magic0, magic1, magic2, magic3 = 'O', 'S', 'R', 'C'
 
 type Socket struct {
@@ -67,7 +69,7 @@ func (s *Socket) Listen() {
 		_ = s.Close()
 	}()
 
-	buf := make([]byte, 7)
+	buf := make([]byte, 15)
 	for {
 		n, addr, err := conn.ReadFrom(buf)
 		if err != nil {
@@ -117,7 +119,35 @@ func (s *Socket) Listen() {
 			continue
 		}
 
-		_, err = s.dispatcher.Dispatch(c, nil)
+		var payload string
+
+		switch c {
+		case command.SET_RUNTIME_OFFSET:
+			if n < 15 {
+				logger.Warnf(
+					logModule,
+					"%v missing int64 payload (%d bytes)",
+					c,
+					n,
+				)
+
+				if ackRequested {
+					sendAck(conn, addr, 2)
+				}
+				continue
+			}
+
+			offset := int64(binary.LittleEndian.Uint64(packet[7:15]))
+			payload = strconv.FormatInt(offset, 10)
+
+			logger.Debugf(
+				logModule,
+				"decoded payload=%d",
+				offset,
+			)
+		}
+
+		_, err = s.dispatcher.Dispatch(c, &payload)
 		if err != nil {
 			logger.Errorf(
 				logModule,

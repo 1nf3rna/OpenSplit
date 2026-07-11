@@ -207,6 +207,8 @@ func (s *Service) SetRuntimeOffsetOverride(offset time.Duration) {
 		"runtime offset override set to %dms",
 		offset.Milliseconds(),
 	)
+
+	s.resetLocked()
 }
 
 // ClearRuntimeOffsetOverride removes the runtime-only offset override.
@@ -215,6 +217,8 @@ func (s *Service) ClearRuntimeOffsetOverride() {
 	defer s.mu.Unlock()
 
 	s.runtimeOffsetOverride = nil
+
+	s.resetLocked()
 
 	logger.Info(logModule, "runtime offset override cleared")
 }
