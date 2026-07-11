@@ -1,4 +1,4 @@
-import { Command } from "../App";
+import { Command } from "../models/command";
 
 export type KeyInfo = {
     key_code: number;

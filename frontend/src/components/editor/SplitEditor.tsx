@@ -12,10 +12,10 @@ import { Dispatch, ExportSplitFile } from "../../../wailsjs/go/dispatcher/Servic
 import { GetAvailableSkins } from "../../../wailsjs/go/skin/Service";
 import { Platforms, SearchCategories, SearchGames } from "../../../wailsjs/go/speedrun/Service";
 import { WindowCenter, WindowSetSize } from "../../../wailsjs/runtime";
-import { Command } from "../../App";
 import addIcon from "../../assets/images/add.png";
 import removeIcon from "../../assets/images/remove.png";
 import { useClickOutside } from "../../hooks/useClickOutside";
+import { Command } from "../../models/command";
 import SegmentPayload from "../../models/segmentPayload";
 import SplitFilePayload from "../../models/splitFilePayload";
 import { IconButton } from "../Tooltip";
@@ -129,7 +129,6 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
         const timeout = setTimeout(async () => {
             if (query.length === 0) {
                 setGames([]);
-                // setShowGames(false);
                 return;
             }
 
@@ -142,8 +141,6 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
                     platforms: g.platforms,
                 })),
             );
-
-            // setShowGames(gameInputFocused && query.length > 0);
         }, 200);
 
         return () => clearTimeout(timeout);
@@ -154,7 +151,6 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
 
         if (!gameID) {
             setCategories([]);
-            // setShowCategories(false);
             return;
         }
 
@@ -162,7 +158,6 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
             console.log("categories", result);
 
             setCategories(result.data);
-            // setShowCategories(gameInputFocused && result.data.length > 0);
         });
     }, [gameID]);
 
@@ -734,7 +729,6 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
                                             setCategoryID("");
 
                                             setGameActive(false);
-                                            // setShowGames(false);
                                         }}
                                     >
                                         {game.name}
@@ -764,7 +758,6 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
                                             setCategoryName(category.name);
                                             setCategoryID(category.id);
                                             setCategoryActive(false);
-                                            // setShowCategories(false);
                                         }}
                                     >
                                         {category.name}
