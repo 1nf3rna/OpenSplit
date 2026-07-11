@@ -51,6 +51,10 @@ func (c *Config) Receive(cmd command.Command, _ *string) (dispatcher.DispatchRep
 		fallthrough
 	case command.PAUSE:
 		fallthrough
+	case command.COMPARISON_LEFT:
+		fallthrough
+	case command.COMPARISON_RIGHT:
+		fallthrough
 	case command.RESET:
 		c.recordingArmed = true
 		c.listeningFor = cmd
@@ -60,10 +64,6 @@ func (c *Config) Receive(cmd command.Command, _ *string) (dispatcher.DispatchRep
 			c.recordingArmed = false
 			logger.Infof(logModule, "updated cmd %v with hotkey %s (%d)",
 				c.listeningFor, data.LocaleName, data.KeyCode)
-			err := machine.hotkeyProvider.Unhook()
-			if err != nil {
-				logger.Error(logModule, err.Error())
-			}
 		})
 		if err != nil {
 			logger.Error(logModule, err.Error())
@@ -92,7 +92,19 @@ func (c *Config) Receive(cmd command.Command, _ *string) (dispatcher.DispatchRep
 func (c *Config) handleHotkey(data keyinfo.KeyData) {
 	if c.recordingArmed {
 		c.recordingArmed = false
+
+		logger.Infof(logModule,
+			"binding cmd %v -> keycode=%d mods=%v",
+			c.listeningFor,
+			data.KeyCode,
+			data.Modifiers,
+		)
+
 		machine.configService.UpdateKeyBinding(c.listeningFor, data)
+	}
+	err := machine.hotkeyProvider.Unhook()
+	if err != nil {
+		logger.Error(logModule, err.Error())
 	}
 }
 
