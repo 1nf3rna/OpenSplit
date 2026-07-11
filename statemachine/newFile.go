@@ -28,8 +28,7 @@ func (n *NewFile) ID() StateID {
 
 func (n *NewFile) OnEnter() error {
 	bridge.EmitUIEvent(machine.runtimeProvider, bridge.AppViewModel{
-		View:               bridge.AppViewNewSplitFile,
-		SpeedrunAPIBaseURL: machine.configService.SpeedRunAPIBase,
+		View: bridge.AppViewNewSplitFile,
 		SplitFile: &dto.SplitFile{
 			SelectedSkin: machine.configService.SelectedSkin,
 		},
@@ -60,12 +59,13 @@ func (n *NewFile) Receive(c command.Command, payload *string) (dispatcher.Dispat
 		if err != nil {
 			return dispatcher.DispatchReply{Code: 4, Message: "failed to save dto: " + err.Error()}, err
 		}
-		machine.skinProvider.SetSkin(dto.SelectedSkin, false)
+		_ = machine.skinProvider.SetSkin(dto.SelectedSkin, false)
 		sf, err := adapters.DTOSplitFileToDomain(dto)
 		if err != nil {
 			return dispatcher.DispatchReply{Code: 5, Message: err.Error()}, err
 		}
 		machine.sessionService.SetLoadedSplitFile(sf)
+		go machine.updateWorldRecord()
 		machine.changeState(RUNNING)
 		return dispatcher.DispatchReply{}, nil
 	default:

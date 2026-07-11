@@ -27,9 +27,8 @@ func (e *Editing) OnEnter() error {
 	splitFileDTO := adapters.DomainSplitFileToDTO(sf)
 	machine.sessionService.Pause()
 	bridge.EmitUIEvent(machine.runtimeProvider, bridge.AppViewModel{
-		View:               bridge.AppViewEditSplitFile,
-		SplitFile:          &splitFileDTO,
-		SpeedrunAPIBaseURL: machine.configService.SpeedRunAPIBase,
+		View:      bridge.AppViewEditSplitFile,
+		SplitFile: &splitFileDTO,
 	})
 	return nil
 }
@@ -54,13 +53,14 @@ func (e *Editing) Receive(c command.Command, payload *string) (dispatcher.Dispat
 		if err != nil {
 			return dispatcher.DispatchReply{Code: 4, Message: "failed to save dto: " + err.Error()}, err
 		}
-		machine.skinProvider.SetSkin(dto.SelectedSkin, false)
+		_ = machine.skinProvider.SetSkin(dto.SelectedSkin, false)
 
 		sf, err := adapters.DTOSplitFileToDomain(dto)
 		if err != nil {
 			return dispatcher.DispatchReply{Code: 5, Message: err.Error()}, err
 		}
 		machine.sessionService.SetLoadedSplitFile(sf)
+		go machine.updateWorldRecord()
 		machine.changeState(RUNNING)
 		return dispatcher.DispatchReply{}, nil
 	default:
