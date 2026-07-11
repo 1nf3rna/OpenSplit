@@ -10,11 +10,11 @@ import React, { useEffect, useState } from "react";
 
 import { Dispatch, ExportSplitFile } from "../../../wailsjs/go/dispatcher/Service";
 import { GetAvailableSkins } from "../../../wailsjs/go/skin/Service";
-import addIcon from "../../assets/images/add.png";
-import removeIcon from "../../assets/images/remove.png";
 import { Platforms, SearchCategories, SearchGames } from "../../../wailsjs/go/speedrun/Service";
 import { WindowCenter, WindowSetSize } from "../../../wailsjs/runtime";
 import { Command } from "../../App";
+import addIcon from "../../assets/images/add.png";
+import removeIcon from "../../assets/images/remove.png";
 import { useClickOutside } from "../../hooks/useClickOutside";
 import SegmentPayload from "../../models/segmentPayload";
 import SplitFilePayload from "../../models/splitFilePayload";
@@ -408,7 +408,7 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
             return root;
         });
     };
-  
+
     function updateSegmentTimes(id: string, average: number, pb: number) {
         function update(list: SegmentPayload[]): SegmentPayload[] {
             return list.map((seg) => {
