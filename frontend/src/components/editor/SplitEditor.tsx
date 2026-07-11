@@ -110,6 +110,8 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
     const [offsetText, setOffsetText] = useState(String(splitFilePayload?.offset ?? 0));
     const [availableSkins, setAvailableSkins] = useState<string[]>([]);
     const [selectedSkin, setSelectedSkin] = useState(splitFilePayload?.selected_skin ?? "");
+
+    const [showCumulativeTimes, setShowCumulativeTimes] = useState(false);
     const [gameActive, setGameActive] = useState(false);
     const [categoryActive, setCategoryActive] = useState(false);
     const selectingGame = React.useRef(false);
@@ -366,6 +368,27 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
             return root;
         });
     };
+  
+    function updateSegmentTimes(id: string, average: number, pb: number) {
+        function update(list: SegmentPayload[]): SegmentPayload[] {
+            return list.map((seg) => {
+                if (seg.id === id) {
+                    return {
+                        ...seg,
+                        average,
+                        pb,
+                    };
+                }
+
+                return {
+                    ...seg,
+                    children: update(seg.children ?? []),
+                };
+            });
+        }
+
+        setSegments((prev) => update(prev));
+    }
 
     const gameAutocompleteRef = React.useRef<HTMLDivElement>(null);
     const categoryAutocompleteRef = React.useRef<HTMLDivElement>(null);
@@ -403,11 +426,17 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
         depth: number,
         inheritedGroup: GroupCtx | null,
         isDirectChild: boolean,
-    ) {
-        let totalAvg = 0;
-        let totalBest = 0;
+        totalAvg: number,
+        totalPB: number,
+    ): {
+        rows: React.ReactElement[];
+        totalAvg: number;
+        totalPB: number;
+    } {
+        const rows: React.ReactElement[] = [];
 
-        return list.map((segment, i) => {
+        for (let i = 0; i < list.length; i++) {
+            const segment = list[i];
             const hasChildren = (segment.children ?? []).length > 0;
 
             // If THIS row is a group parent, it defines a new group color for itself + its direct children
@@ -435,13 +464,11 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
                 .filter(Boolean)
                 .join(" ");
 
-            // Only pass group context ONE level down:
-            // - if segment is a group parent => its direct children inherit its group color
-            // - otherwise => children do NOT inherit (unless they themselves become group parents)
-            const nextInheritedGroup = ownGroup ?? null;
-            const nextIsDirectChild = !!ownGroup;
+            const displayAverage = showCumulativeTimes ? totalAvg + segment.average : segment.average;
 
-            const frag = (
+            const displayPB = showCumulativeTimes ? totalPB + segment.pb : segment.pb;
+
+            rows.push(
                 <React.Fragment key={segment.id}>
                     <tr className={rowClassName} style={rowStyle}>
                         <td>
@@ -479,10 +506,34 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
                         </td>
 
                         <td>
-                            {!hasChildren && <TimeRow time={segment.average ? segment.average + totalAvg : null} />}
+                            {!hasChildren && (
+                                <TimeRow
+                                    time={displayAverage}
+                                    onChange={(newAverage) => {
+                                        updateSegmentTimes(
+                                            segment.id,
+                                            showCumulativeTimes ? newAverage - totalAvg : newAverage,
+                                            segment.pb,
+                                        );
+                                    }}
+                                />
+                            )}
                         </td>
 
-                        <td>{!hasChildren && <TimeRow time={segment.pb ? segment.pb + totalBest : null} />}</td>
+                        <td>
+                            {!hasChildren && (
+                                <TimeRow
+                                    time={displayPB}
+                                    onChange={(newPB) => {
+                                        updateSegmentTimes(
+                                            segment.id,
+                                            segment.average,
+                                            showCumulativeTimes ? newPB - totalPB : newPB,
+                                        );
+                                    }}
+                                />
+                            )}
+                        </td>
 
                         <td>
                             <IconButton icon={faFolder} tooltip="Add subsegment" onClick={() => addSegment(segment)} />
@@ -496,18 +547,31 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
                             />
                         </td>
                     </tr>
-
-                    {(segment.children ?? []).length > 0 &&
-                        renderRows(segment.children ?? [], depth + 1, nextInheritedGroup, nextIsDirectChild)}
-                </React.Fragment>
+                </React.Fragment>,
             );
 
+            // Leaf segments contribute to running totals
             if (!hasChildren) {
                 totalAvg += segment.average;
-                totalBest += segment.pb;
+                totalPB += segment.pb;
             }
-            return frag;
-        });
+
+            // Children continue from current totals instead of restarting
+            if (hasChildren) {
+                const childResult = renderRows(segment.children, depth + 1, ownGroup, true, totalAvg, totalPB);
+
+                rows.push(...childResult.rows);
+
+                totalAvg = childResult.totalAvg;
+                totalPB = childResult.totalPB;
+            }
+        }
+
+        return {
+            rows,
+            totalAvg,
+            totalPB,
+        };
     }
 
     return (
@@ -648,12 +712,22 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
                     />
                 </div>
 
-                <div style={{ marginTop: 20, marginBottom: 20 }} className="row">
-                    <div>
-                        <button onClick={() => addSegment(null)} type="button">
-                            Add Segment
-                        </button>
-                    </div>
+                <div
+                    style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        marginTop: 20,
+                        marginBottom: 20,
+                    }}
+                >
+                    <button onClick={() => addSegment(null)} type="button">
+                        Add Segment
+                    </button>
+
+                    <button type="button" onClick={() => setShowCumulativeTimes((v) => !v)}>
+                        {showCumulativeTimes ? "Cumulative Times" : "Segment Times"}
+                    </button>
                 </div>
 
                 <div className="datagrid-container">
@@ -674,7 +748,7 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
                                         <th style={{ width: "5%" }}></th>
                                     </tr>
                                 </thead>
-                                <tbody>{renderRows(segments, 0, null, false)}</tbody>
+                                <tbody>{renderRows(segments, 0, null, false, 0, 0).rows}</tbody>
                             </table>
                         )}
                     </div>

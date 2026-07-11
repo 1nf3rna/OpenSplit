@@ -220,7 +220,7 @@ func domainRunToDTO(run session.Run, splitFileID uuid.UUID, splitFileVersion int
 		TotalTime:        run.TotalTime.Milliseconds(),
 		Splits:           domainSplitsToDTO(run.Splits),
 		LeafSegments:     nil,
-		Completed:        false,
+		Completed:        run.Completed,
 	}
 }
 
