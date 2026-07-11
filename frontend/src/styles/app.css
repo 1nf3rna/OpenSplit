@@ -50,6 +50,16 @@
         outline-offset: 2px;
     }
 
+    .splitName {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .splitName img {
+        flex-shrink: 0;
+    }
+
     .has-tooltip {
         position: relative;
     }
@@ -95,6 +105,7 @@
         border-right: 3px solid rgba(0, 0, 0, 0.25);
     }
 
+    /* Top border on the group parent row */
     .seg-group-parent > td {
         border-top: 3px solid rgba(0, 0, 0, 0.25);
     }

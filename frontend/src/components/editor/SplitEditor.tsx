@@ -32,7 +32,6 @@ import {
 
 type SplitEditorParams = {
     splitFilePayload: SplitFilePayload | null;
-    speedRunAPIBase?: string;
 };
 
 type RunningTotals = {
@@ -86,11 +85,63 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
     const [selectedSkin, setSelectedSkin] = useState(splitFilePayload?.selected_skin ?? "");
 
     const [showCumulativeTimes, setShowCumulativeTimes] = useState(false);
-
     const [gameActive, setGameActive] = useState(false);
     const [categoryActive, setCategoryActive] = useState(false);
-
     const selectingGame = React.useRef(false);
+
+    useEffect(() => {
+        if (selectingGame.current) {
+            selectingGame.current = false;
+            return;
+        }
+
+        const query = gameName.trim();
+
+        const timeout = setTimeout(async () => {
+            if (query.length === 0) {
+                setGames([]);
+                return;
+            }
+
+            const games = await SearchGames(query);
+
+            setGames(
+                games.data.map((g) => ({
+                    id: g.id,
+                    name: g.names.international,
+                    platforms: g.platforms,
+                })),
+            );
+        }, 200);
+
+        return () => clearTimeout(timeout);
+    }, [gameName]);
+
+    useEffect(() => {
+        console.log("gameID changed:", gameID);
+
+        if (!gameID) {
+            setCategories([]);
+            return;
+        }
+
+        SearchCategories(gameID).then((result) => {
+            console.log("categories", result);
+
+            setCategories(result.data);
+        });
+    }, [gameID]);
+
+    useEffect(() => {
+        Platforms().then((p) => {
+            setPlatforms(p);
+        });
+    }, []);
+
+    useEffect(() => {
+        const offset = splitFilePayload?.offset ?? 0;
+        setOffsetText(String(offset));
+    }, [splitFilePayload]);
 
     const gameAutocompleteRef = React.useRef<HTMLDivElement>(null);
     const categoryAutocompleteRef = React.useRef<HTMLDivElement>(null);
@@ -302,28 +353,43 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
     const longestGameWidth = React.useMemo(() => {
         const canvas = document.createElement("canvas");
         const ctx = canvas.getContext("2d");
-
-        if (!ctx) {
-            return 250;
-        }
+        if (!ctx) return 250;
 
         ctx.font = getComputedStyle(document.body).font;
 
-        return Math.max(150, ...games.map((g) => ctx.measureText(g.name).width + 10));
+        return Math.max(150, ...games.map((m) => ctx.measureText(m.name).width + 10));
     }, [games]);
 
     const longestCategoryWidth = React.useMemo(() => {
         const canvas = document.createElement("canvas");
         const ctx = canvas.getContext("2d");
-
-        if (!ctx) {
-            return 150;
-        }
+        if (!ctx) return 150;
 
         ctx.font = getComputedStyle(document.body).font;
 
         return Math.max(150, ...categories.map((c) => ctx.measureText(c.name).width + 10));
     }, [categories]);
+
+    // function updateSegmentTimes(id: string, average: number, pb: number) {
+    //     function update(list: SegmentPayload[]): SegmentPayload[] {
+    //         return list.map((seg) => {
+    //             if (seg.id === id) {
+    //                 return {
+    //                     ...seg,
+    //                     average,
+    //                     pb,
+    //                 };
+    //             }
+
+    //             return {
+    //                 ...seg,
+    //                 children: update(seg.children ?? []),
+    //             };
+    //         });
+    //     }
+
+    //     setSegments((prev) => update(prev));
+    // }
 
     /**
      * Renders the segment hierarchy.
@@ -344,6 +410,17 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
         for (let i = 0; i < list.length; i++) {
             const segment = list[i];
 
+            //     totalAvg: number,
+            //     totalPB: number,
+            // ): {
+            //     rows: React.ReactElement[];
+            //     totalAvg: number;
+            //     totalPB: number;
+            // } {
+            //     const rows: React.ReactElement[] = [];
+
+            //     for (let i = 0; i < list.length; i++) {
+            //         const segment = list[i];
             const hasChildren = (segment.children ?? []).length > 0;
 
             const displayAverage = showCumulativeTimes ? running.avg + segment.average : segment.average;
@@ -375,8 +452,179 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
                     onAddChild={addSegment}
                     onUpdate={updateSegment}
                 ></SegmentRow>,
+                // const rowClassName = [
+                //     inGroup ? "seg-group" : "",
+                //     isGroupParentRow ? "seg-group-parent" : "",
+                //     isGroupChildRow ? "seg-group-child" : "",
+                // ]
+                //     .filter(Boolean)
+                //     .join(" ");
+
+                // const displayAverage = showCumulativeTimes ? totalAvg + segment.average : segment.average;
+
+                // const displayPB = showCumulativeTimes ? totalPB + segment.pb : segment.pb;
+
+                // rows.push(
+                //     <React.Fragment key={segment.id}>
+                //         <tr className={rowClassName} style={rowStyle}>
+                //             <td>
+                //                 <div style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: 6 }}>
+                //                     <IconButton
+                //                         icon={faArrowUp}
+                //                         tooltip="Move segment up"
+                //                         onClick={() => moveSegmentUp(segment.id)}
+                //                     />
+                //                     <IconButton
+                //                         icon={faArrowDown}
+                //                         tooltip="Move segment down"
+                //                         onClick={() => moveSegmentDown(segment.id)}
+                //                     />
+                //                     <IconButton
+                //                         icon={faArrowUpFromBracket}
+                //                         tooltip="Group under the segment above"
+                //                         show={i !== 0}
+                //                         onClick={() => groupIntoPreviousSibling(segment.id)}
+                //                     />
+                //                     <IconButton
+                //                         icon={faArrowRightFromBracket}
+                //                         tooltip="Remove from group (move to top level)"
+                //                         show={depth > 0}
+                //                         onClick={() => ungroupToTopLevel(segment.id)}
+                //                     />
+                //                 </div>
+                //             </td>
+
+                //             <td>
+                //                 <div
+                //                     style={{
+                //                         display: "flex",
+                //                         alignItems: "center",
+                //                         gap: 8,
+                //                     }}
+                //                 >
+                //                     <input
+                //                         id={`segment-icon-${segment.id}`}
+                //                         type="file"
+                //                         accept="image/*"
+                //                         style={{ display: "none" }}
+                //                         onChange={(e) => updateSegmentIcon(segment.id, e)}
+                //                     />
+
+                //                     {!segment.icon ? (
+                //                         <img
+                //                             src={addIcon}
+                //                             alt="Choose image"
+                //                             title="Choose image"
+                //                             onClick={() => document.getElementById(`segment-icon-${segment.id}`)?.click()}
+                //                             style={{
+                //                                 width: 24,
+                //                                 height: 24,
+                //                                 cursor: "pointer",
+                //                                 backgroundColor: "#fff",
+                //                                 border: "1px solid #666",
+                //                                 borderRadius: 2,
+                //                                 padding: 2,
+                //                                 boxSizing: "border-box",
+                //                             }}
+                //                         />
+                //                     ) : (
+                //                         <>
+                //                             <img
+                //                                 src={segment.icon}
+                //                                 alt=""
+                //                                 title="Choose a different image"
+                //                                 onClick={() =>
+                //                                     document.getElementById(`segment-icon-${segment.id}`)?.click()
+                //                                 }
+                //                                 style={{
+                //                                     width: 24,
+                //                                     height: 24,
+                //                                     objectFit: "contain",
+                //                                     border: "1px solid #666",
+                //                                     borderRadius: 2,
+                //                                     cursor: "pointer",
+                //                                 }}
+                //                             />
+
+                //                             <img
+                //                                 src={removeIcon}
+                //                                 alt="Clear image"
+                //                                 title="Clear image"
+                //                                 onClick={() =>
+                //                                     updateSegment(segment.id, (s) => ({
+                //                                         ...s,
+                //                                         icon: "",
+                //                                     }))
+                //                                 }
+                //                                 style={{
+                //                                     width: 24,
+                //                                     height: 24,
+                //                                     cursor: "pointer",
+                //                                     backgroundColor: "#fff",
+                //                                     border: "1px solid #666",
+                //                                     borderRadius: 2,
+                //                                     padding: 2,
+                //                                     boxSizing: "border-box",
+                //                                 }}
+                //                             />
+                //                         </>
+                //                     )}
+                //                 </div>
+                //             </td>
+
+                //             <td style={{ paddingLeft: depth * 20 }}>
+                //                 <input
+                //                     value={segment.name}
+                //                     onChange={(e) => updateSegmentName(segment.id, e.target.value)}
+                //                 />
+                //             </td>
+
+                //             <td>
+                //                 {!hasChildren && (
+                //                     <TimeRow
+                //                         time={displayAverage}
+                //                         onChange={(newAverage) => {
+                //                             updateSegmentTimes(
+                //                                 segment.id,
+                //                                 showCumulativeTimes ? newAverage - totalAvg : newAverage,
+                //                                 segment.pb,
+                //                             );
+                //                         }}
+                //                     />
+                //                 )}
+                //             </td>
+
+                //             <td>
+                //                 {!hasChildren && (
+                //                     <TimeRow
+                //                         time={displayPB}
+                //                         onChange={(newPB) => {
+                //                             updateSegmentTimes(
+                //                                 segment.id,
+                //                                 segment.average,
+                //                                 showCumulativeTimes ? newPB - totalPB : newPB,
+                //                             );
+                //                         }}
+                //                     />
+                //                 )}
+                //             </td>
+
+                //             <td>
+                //                 <IconButton icon={faFolder} tooltip="Add subsegment" onClick={() => addSegment(segment)} />
+                //             </td>
+
+                //             <td>
+                //                 <IconButton
+                //                     icon={faTrash}
+                //                     tooltip="Delete segment"
+                //                     onClick={() => deleteSegment(segment.id)}
+                //                 />
+                //             </td>
+                //         </tr>
+                //     </React.Fragment>,
             );
 
+            // Leaf segments contribute to running totals
             if (!hasChildren) {
                 running = {
                     avg: running.avg + segment.average,
@@ -388,12 +636,26 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
             if (child) {
                 rows.push(...child.rows);
                 running = child.totals;
+                //     totalAvg += segment.average;
+                //     totalPB += segment.pb;
+                // }
+
+                // // Children continue from current totals instead of restarting
+                // if (hasChildren) {
+                //     const childResult = renderRows(segment.children, depth + 1, ownGroup, true, totalAvg, totalPB);
+
+                //     rows.push(...childResult.rows);
+
+                //     totalAvg = childResult.totalAvg;
+                //     totalPB = childResult.totalPB;
             }
         }
 
         return {
             rows,
             totals: running,
+            // totalAvg,
+            // totalPB,
         };
     }
 
@@ -421,20 +683,15 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
                             }}
                             autoComplete="off"
                         />
-
                         {gameActive && games.length > 0 && (
-                            <ul
-                                className="autocomplete-list"
-                                style={{
-                                    width: `${Math.ceil(longestGameWidth)}px`,
-                                }}
-                            >
+                            <ul className="autocomplete-list" style={{ width: `${Math.ceil(longestGameWidth)}px` }}>
                                 {games.map((game) => (
                                     <li
                                         key={game.id}
                                         onMouseDown={() => {
                                             selectingGame.current = true;
-
+                                            console.log("Selected gameID: ", game.id);
+                                            console.log("Selected game: ", game.name);
                                             setGameName(game.name);
                                             setGameID(game.id);
 
@@ -592,6 +849,10 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
                                             }}
                                         >
                                             Icon
+                                            {/*<th style={{ width: "12%" }}>Icon</th>
+                                        <th style={{ width: "50%" }}>Segment Name</th>
+                                        <th>
+                                            Average Time <small>(HH:MM:SS.ccc)</small>*/}
                                         </th>
 
                                         <th
@@ -642,6 +903,7 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
                                         }).rows
                                     }
                                 </tbody>
+                                {/*<tbody>{renderRows(segments, 0, null, false, 0, 0).rows}</tbody>*/}
                             </table>
                         )}
                     </div>
