@@ -18,6 +18,7 @@ import { useClickOutside } from "../../hooks/useClickOutside";
 import { Command } from "../../models/command";
 import SegmentPayload from "../../models/segmentPayload";
 import SplitFilePayload from "../../models/splitFilePayload";
+import { log } from "../../utils/logger";
 import { colorFromId, GroupCtx } from "./hashColor";
 import SegmentRow from "./SegmentRow";
 import {
@@ -109,6 +110,31 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
     const selectingGame = React.useRef(false);
 
     useEffect(() => {
+        WindowSetSize(1000, 900);
+        WindowCenter();
+
+        console.debug("Loaded split editor", splitFilePayload?.id);
+
+        const loadData = async () => {
+            const [skinsResult, platformsResult] = await Promise.allSettled([GetAvailableSkins(), Platforms()]);
+
+            if (skinsResult.status === "fulfilled") {
+                setAvailableSkins(skinsResult.value);
+            } else {
+                console.error("Unable to load skins", skinsResult.reason);
+            }
+
+            if (platformsResult.status === "fulfilled") {
+                setPlatforms(platformsResult.value);
+            } else {
+                console.error("Failed to load speedrun platforms", platformsResult.reason);
+            }
+        };
+
+        void loadData();
+    }, []);
+
+    useEffect(() => {
         if (selectingGame.current) {
             selectingGame.current = false;
             return;
@@ -135,66 +161,6 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
 
         return () => clearTimeout(timeout);
     }, [gameName]);
-
-    useEffect(() => {
-        console.log("gameID changed:", gameID);
-
-        if (!gameID) {
-            setCategories([]);
-            return;
-        }
-
-        SearchCategories(gameID).then((result) => {
-            console.log("categories", result);
-
-            setCategories(result.data);
-        });
-    }, [gameID]);
-
-    useEffect(() => {
-        Platforms().then((p) => {
-            setPlatforms(p);
-        });
-    }, []);
-
-    useEffect(() => {
-        const offset = splitFilePayload?.offset ?? 0;
-        setOffsetText(String(offset));
-    }, [splitFilePayload]);
-
-    const gameAutocompleteRef = React.useRef<HTMLDivElement>(null);
-    const categoryAutocompleteRef = React.useRef<HTMLDivElement>(null);
-
-    useClickOutside(gameAutocompleteRef, () => setGameActive(false));
-    useClickOutside(categoryAutocompleteRef, () => setCategoryActive(false));
-
-    useEffect(() => {
-        WindowSetSize(1000, 900);
-        WindowCenter();
-
-        console.debug("Loaded split editor", splitFilePayload?.id);
-
-        setSegments(cloneSegments(splitFilePayload?.segments ?? []));
-        setOffsetText(String(splitFilePayload?.offset ?? 0));
-
-        const loadData = async () => {
-            const [skinsResult, platformsResult] = await Promise.allSettled([GetAvailableSkins(), Platforms()]);
-
-            if (skinsResult.status === "fulfilled") {
-                setAvailableSkins(skinsResult.value);
-            } else {
-                console.error("Unable to load skins", skinsResult.reason);
-            }
-
-            if (platformsResult.status === "fulfilled") {
-                setPlatforms(platformsResult.value);
-            } else {
-                console.error("Failed to load speedrun platforms", platformsResult.reason);
-            }
-        };
-
-        void loadData();
-    }, []);
 
     useEffect(() => {
         setSegments(cloneSegments(splitFilePayload?.segments ?? []));
@@ -225,34 +191,7 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
     }, [platforms, platform, editing]);
 
     useEffect(() => {
-        if (selectingGame.current) {
-            selectingGame.current = false;
-            return;
-        }
-
-        const query = gameName.trim();
-
-        const timeout = setTimeout(async () => {
-            if (query.length === 0) {
-                setGames([]);
-                return;
-            }
-
-            const result = await SearchGames(query);
-
-            setGames(
-                result.data.map((g) => ({
-                    id: g.id,
-                    name: g.names.international,
-                    platforms: g.platforms,
-                })),
-            );
-        }, 200);
-
-        return () => clearTimeout(timeout);
-    }, [gameName]);
-
-    useEffect(() => {
+        log.info("gameID changed:", gameID);
         if (!gameID) {
             setCategories([]);
             return;
@@ -260,6 +199,7 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
 
         const update = async () => {
             const [categories] = await Promise.all([SearchCategories(gameID)]);
+            log.debug("categories:", categories);
 
             setCategories(categories.data);
 
@@ -318,6 +258,12 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
             setSelectedVariables(values);
         });
     }, [categoryID]);
+
+    const gameAutocompleteRef = React.useRef<HTMLDivElement>(null);
+    const categoryAutocompleteRef = React.useRef<HTMLDivElement>(null);
+
+    useClickOutside(gameAutocompleteRef, () => setGameActive(false));
+    useClickOutside(categoryAutocompleteRef, () => setCategoryActive(false));
 
     const handleOffsetChange = (value: string) => {
         if (/^-?\d*$/.test(value)) {
@@ -545,8 +491,8 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
                                         key={game.id}
                                         onMouseDown={() => {
                                             selectingGame.current = true;
-                                            console.log("Selected gameID: ", game.id);
-                                            console.log("Selected game: ", game.name);
+                                            log.info("Selected gameID: ", game.id);
+                                            log.info("Selected game: ", game.name);
                                             setGameName(game.name);
                                             setGameID(game.id);
 
