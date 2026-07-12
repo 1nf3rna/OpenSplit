@@ -2,7 +2,7 @@ package repo
 
 import (
 	"errors"
-	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/zellydev-games/opensplit/config"
@@ -37,6 +37,22 @@ type Service struct {
 
 func NewService(repository Repository) *Service {
 	return &Service{repository: repository}
+}
+
+func buildSplitFileName(sf dto.SplitFile) string {
+	var parts []string
+
+	parts = append(parts, sf.Platform)
+	parts = append(parts, sf.GameName)
+	parts = append(parts, sf.GameCategory)
+
+	for _, v := range sf.Variables {
+		if strings.TrimSpace(v.Label) != "" {
+			parts = append(parts, v.Label)
+		}
+	}
+
+	return strings.Join(parts, "-") + ".osf"
 }
 
 // LoadSplitFile reads splitfile bytes from a repo and returns it as a session.SplitFile
@@ -113,11 +129,7 @@ func (s *Service) SaveSplitFile(splitFile dto.SplitFile) error {
 	if err != nil {
 		return err
 	}
-	identifier := splitFile.GameName
-	if splitFile.GameCategory != "" {
-		identifier += "-" + splitFile.GameCategory
-	}
-	identifier += ".osf"
+	identifier := buildSplitFileName(splitFile)
 
 	// minimum sizes and position
 	splitFile.WindowX = max(10, splitFile.WindowX)
@@ -166,7 +178,7 @@ func (s *Service) Export() error {
 		return err
 	}
 
-	defaultFileName := fmt.Sprintf("%s-%s-%s.osf", sf.Platform, sf.GameName, sf.GameCategory)
+	defaultFileName := buildSplitFileName(sf)
 	logger.Infof(
 		logModule,
 		"export complete: %s",
