@@ -49,6 +49,7 @@ func (e *Editing) Receive(c command.Command, payload *string) (dispatcher.Dispat
 				Message: "nil payload received",
 			}, nil
 		}
+		logger.Debugf(logModule, "payload %v", payload)
 		dto, err := adapters.JSONSplitFileToDTO(*payload)
 		if err != nil {
 			return dispatcher.DispatchReply{Code: 2, Message: err.Error()}, err

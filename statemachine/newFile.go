@@ -51,11 +51,13 @@ func (n *NewFile) Receive(c command.Command, payload *string) (dispatcher.Dispat
 			}, nil
 		}
 		logger.Info(logModule, "creating new split file")
+		logger.Debugf(logModule, "payload %v", payload)
 		dto, err := adapters.JSONSplitFileToDTO(*payload)
 		if err != nil {
 			logger.Error(logModule, err.Error())
 			return dispatcher.DispatchReply{Code: 2, Message: err.Error()}, err
 		}
+		logger.Debugf(logModule, "dto %v", dto)
 		err = machine.repoService.SaveSplitFile(dto)
 		if err != nil {
 			return dispatcher.DispatchReply{Code: 4, Message: "failed to save dto: " + err.Error()}, err
@@ -67,6 +69,7 @@ func (n *NewFile) Receive(c command.Command, payload *string) (dispatcher.Dispat
 		if err != nil {
 			return dispatcher.DispatchReply{Code: 5, Message: err.Error()}, err
 		}
+		logger.Debugf(logModule, "sf %v", sf)
 		machine.sessionService.SetLoadedSplitFile(sf)
 		go machine.updateWorldRecord()
 		machine.changeState(RUNNING)
