@@ -1,6 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
-import { vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 vi.mock("../../wailsjs/go/dispatcher/Service", () => ({
     Dispatch: vi.fn().mockResolvedValue(undefined),
@@ -9,7 +8,7 @@ vi.mock("../../wailsjs/go/dispatcher/Service", () => ({
 import userEvent from "@testing-library/user-event";
 
 import { Dispatch } from "../../wailsjs/go/dispatcher/Service";
-import { Command } from "../App";
+import { Command } from "../models/command";
 import Welcome from "./Welcome";
 
 describe("Welcome", () => {
