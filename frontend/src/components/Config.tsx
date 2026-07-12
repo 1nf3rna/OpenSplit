@@ -18,7 +18,6 @@ export default function Config({ configPayload }: ConfigParams) {
     const [recording, setRecording] = useState(false);
     const [config, setConfig] = useState<ConfigPayload>(configPayload);
     const [availableSkins, setAvailableSkins] = useState<Array<string>>([]);
-    const [selectedSkin, setSelectedSkin] = useState<string>(configPayload.selected_skin);
     const [rollingAvg, setRollingAvg] = useState<number>(configPayload.rolling_average_runs ?? DEFAULT_ROLLING_AVG);
 
     useEffect(() => {
@@ -31,12 +30,24 @@ export default function Config({ configPayload }: ConfigParams) {
         };
 
         void loadSkins();
+    }, []);
 
-        return EventsOn("config:update", (newConfigPayload: ConfigPayload) => {
-            log.info("Configuration updated", newConfigPayload);
-            setConfig(newConfigPayload);
+    useEffect(() => {
+        const offHotkey = EventsOn("config:hotkey-recorded", (evt: { command: Command; key_info: KeyInfo }) => {
             setRecording(false);
+
+            setConfig((prev) => ({
+                ...prev,
+                key_config: {
+                    ...(prev.key_config ?? {}),
+                    [evt.command]: evt.key_info,
+                },
+            }));
         });
+
+        return () => {
+            offHotkey();
+        };
     }, []);
 
     useEffect(() => {
@@ -44,10 +55,12 @@ export default function Config({ configPayload }: ConfigParams) {
     }, [config]);
 
     useEffect(() => {
-        (async () => {
-            await SetSkin(selectedSkin, true);
-        })();
-    }, [selectedSkin]);
+        void SetSkin(config.selected_skin, true);
+    }, [config.selected_skin]);
+
+    const hasHotkey = (ki?: KeyInfo) => {
+        return !!ki && !!ki.locale_name;
+    };
 
     // backend records the next keypress
     const armHotkey = async (command: Command) => {
@@ -56,6 +69,18 @@ export default function Config({ configPayload }: ConfigParams) {
             log.debug("Hotkey recording armed");
             setRecording(true);
         }
+    };
+
+    const clearHotkey = (command: Command) => {
+        setConfig((prev) => {
+            const keyConfig = { ...(prev.key_config ?? {}) };
+            delete keyConfig[command];
+
+            return {
+                ...prev,
+                key_config: keyConfig,
+            };
+        });
     };
 
     const getHotkeyName = (ki?: KeyInfo): string => {
@@ -84,13 +109,21 @@ export default function Config({ configPayload }: ConfigParams) {
             [Command.COMPARISON_RIGHT, "Next Comparison"],
         ];
 
-        return commands.map((command: [Command, string]) => (
-            <div className="row" key={command[0]}>
+        return commands.map(([command, label]) => (
+            <div className="row" key={command}>
                 <div className="hotkeyContainer">
-                    <p className="hotkeyID">{command[1]}: </p>
-                    <p className="hotkeyValue">{getHotkeyName(config.key_config?.[command[0]])}</p>
-                    <button disabled={recording} onClick={() => armHotkey(command[0])}>
-                        {(recording && "Recording") || "Record Hotkey"}
+                    <p className="hotkeyID">{label}:</p>
+                    <p className="hotkeyValue">{getHotkeyName(config.key_config?.[command])}</p>
+
+                    <button disabled={recording} onClick={() => armHotkey(command)}>
+                        {recording ? "Recording" : "Record Hotkey"}
+                    </button>
+
+                    <button
+                        disabled={recording || !hasHotkey(config.key_config?.[command])}
+                        onClick={() => clearHotkey(command)}
+                    >
+                        Clear
                     </button>
                 </div>
             </div>
@@ -112,8 +145,13 @@ export default function Config({ configPayload }: ConfigParams) {
                 <select
                     style={{ marginLeft: 20, width: "50%" }}
                     id="selectedSkin"
-                    value={selectedSkin}
-                    onChange={(e) => setSelectedSkin(e.target.value)}
+                    value={config.selected_skin}
+                    onChange={(e) =>
+                        setConfig((prev) => ({
+                            ...prev,
+                            selected_skin: e.target.value,
+                        }))
+                    }
                 >
                     {availableSkins.map((s) => (
                         <option value={s} key={s}>
@@ -132,11 +170,13 @@ export default function Config({ configPayload }: ConfigParams) {
                     value={rollingAvg}
                     onChange={(e) => {
                         const v = parseInt(e.target.value);
+
                         setRollingAvg(v);
-                        setConfig({
-                            ...config,
+
+                        setConfig((prev) => ({
+                            ...prev,
                             rolling_average_runs: v,
-                        });
+                        }));
                     }}
                 >
                     {[5, 10, 20, 50, 100].map((n) => (

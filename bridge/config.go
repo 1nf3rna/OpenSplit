@@ -1,9 +1,21 @@
 package bridge
 
 import (
+	"github.com/zellydev-games/opensplit/command"
 	"github.com/zellydev-games/opensplit/config"
+	"github.com/zellydev-games/opensplit/keyinfo"
 	"github.com/zellydev-games/opensplit/logger"
 )
+
+const (
+	ConfigUpdatedEvent        = "config:update"
+	ConfigHotkeyRecordedEvent = "config:hotkey-recorded"
+)
+
+type HotkeyRecorded struct {
+	Command command.Command `json:"command"`
+	KeyInfo keyinfo.KeyData `json:"key_info"`
+}
 
 // Config forwards configuration updates to the frontend.
 type Config struct {
@@ -24,8 +36,15 @@ func (c *Config) StartUIPump() {
 				logger.Debug(logModule, "config UI pump stopped")
 				return
 			}
-			c.runtimeProvider.EventsEmit("config:update", updatedConfig)
+			c.runtimeProvider.EventsEmit(ConfigUpdatedEvent, updatedConfig)
 		}
 	}()
 	logger.Debug(logModule, "config UI pump started")
+}
+
+func EmitHotkeyRecorded(runtimeProvider RuntimeProvider, cmd command.Command, key keyinfo.KeyData) {
+	runtimeProvider.EventsEmit(ConfigHotkeyRecordedEvent, HotkeyRecorded{
+		Command: cmd,
+		KeyInfo: key,
+	})
 }

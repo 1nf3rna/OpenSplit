@@ -107,3 +107,26 @@ func (s *Service) EnsureDefaultKeyBindings() {
 		}
 	}
 }
+
+func (s *Service) Apply(newConfig *Service) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.KeyConfig = make(map[command.Command]keyinfo.KeyData, len(newConfig.KeyConfig))
+
+	for k, v := range newConfig.KeyConfig {
+		s.KeyConfig[k] = v
+	}
+
+	s.SpeedRunAPIBase = newConfig.SpeedRunAPIBase
+	s.GlobalHotkeysActive = newConfig.GlobalHotkeysActive
+	s.SelectedSkin = newConfig.SelectedSkin
+	s.SplitFileDir = newConfig.SplitFileDir
+	s.SkinsDir = newConfig.SkinsDir
+	s.RollingAverageRuns = newConfig.RollingAverageRuns
+}
+
+// NotifyUpdate sends the current configuration to the UI.
+func (s *Service) NotifyUpdate() {
+	s.sendUIBridgeUpdate()
+}

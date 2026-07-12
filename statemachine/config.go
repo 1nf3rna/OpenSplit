@@ -10,6 +10,7 @@ import (
 	"github.com/zellydev-games/opensplit/dispatcher"
 	"github.com/zellydev-games/opensplit/keyinfo"
 	"github.com/zellydev-games/opensplit/logger"
+	"github.com/zellydev-games/opensplit/repo/adapters"
 )
 
 const RecordingArmed = 10
@@ -43,7 +44,7 @@ func (c *Config) OnExit() error {
 }
 
 // Receive handles configuration commands originating from the frontend.
-func (c *Config) Receive(cmd command.Command, _ *string) (dispatcher.DispatchReply, error) {
+func (c *Config) Receive(cmd command.Command, payload *string) (dispatcher.DispatchReply, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	switch cmd {
@@ -65,7 +66,6 @@ func (c *Config) Receive(cmd command.Command, _ *string) (dispatcher.DispatchRep
 		logger.Infof(logModule, "recording armed for cmd: %d", c.listeningFor)
 		err := machine.hotkeyProvider.StartHook(func(data keyinfo.KeyData) {
 			c.handleHotkey(data)
-			c.recordingArmed = false
 			logger.Infof(logModule, "updated cmd %v with hotkey %s (%d)",
 				c.listeningFor, data.LocaleName, data.KeyCode)
 		})
@@ -79,10 +79,31 @@ func (c *Config) Receive(cmd command.Command, _ *string) (dispatcher.DispatchRep
 		machine.changeState(c.previousState)
 		return dispatcher.DispatchReply{}, nil
 	case command.SUBMIT:
-		err := machine.repoService.SaveConfig(machine.configService)
+		if payload == nil {
+			return dispatcher.DispatchReply{
+				Code:    4,
+				Message: "missing config payload",
+			}, errors.New("missing config payload")
+		}
+
+		newConfig, err := adapters.FrontEndToConfig([]byte(*payload))
 		if err != nil {
-			message := fmt.Sprintf("error saving config to repo %s", err)
-			return dispatcher.DispatchReply{Code: 4, Message: message}, errors.New(message)
+			return dispatcher.DispatchReply{
+				Code:    4,
+				Message: err.Error(),
+			}, err
+		}
+
+		machine.configService.Apply(newConfig)
+
+		machine.configService.NotifyUpdate()
+
+		if err := machine.repoService.SaveConfig(machine.configService); err != nil {
+			message := fmt.Sprintf("error saving config to repo: %v", err)
+			return dispatcher.DispatchReply{
+				Code:    4,
+				Message: message,
+			}, errors.New(message)
 		}
 
 		machine.changeState(c.previousState)
@@ -99,16 +120,20 @@ func (c *Config) handleHotkey(data keyinfo.KeyData) {
 		c.recordingArmed = false
 
 		logger.Infof(logModule,
-			"binding cmd %v -> keycode=%d mods=%v",
+			"recording cmd %v -> keycode=%d mods=%v",
 			c.listeningFor,
 			data.KeyCode,
 			data.Modifiers,
 		)
 
-		machine.configService.UpdateKeyBinding(c.listeningFor, data)
+		bridge.EmitHotkeyRecorded(
+			machine.runtimeProvider,
+			c.listeningFor,
+			data,
+		)
 	}
-	err := machine.hotkeyProvider.Unhook()
-	if err != nil {
+
+	if err := machine.hotkeyProvider.Unhook(); err != nil {
 		logger.Error(logModule, err.Error())
 	}
 }
