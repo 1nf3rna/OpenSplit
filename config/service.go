@@ -59,12 +59,8 @@ func (s *Service) UpdateKeyBinding(c command.Command, data keyinfo.KeyData) {
 //
 // Useful if the config file hasn't been created yet (first run)
 func (s *Service) CreateDefaultConfig() {
-	s.KeyConfig = map[command.Command]keyinfo.KeyData{}
-	s.KeyConfig[command.SPLIT] = keyinfo.KeyData{}
-	s.KeyConfig[command.UNDO] = keyinfo.KeyData{}
-	s.KeyConfig[command.SKIP] = keyinfo.KeyData{}
-	s.KeyConfig[command.PAUSE] = keyinfo.KeyData{}
-	s.KeyConfig[command.RESET] = keyinfo.KeyData{}
+	s.KeyConfig = make(map[command.Command]keyinfo.KeyData)
+	s.EnsureDefaultKeyBindings()
 	s.sendUIBridgeUpdate()
 	logger.Infof(logModule, "created default config")
 }
@@ -73,5 +69,29 @@ func (s *Service) sendUIBridgeUpdate() {
 	select {
 	case s.configUpdatedChannel <- s:
 	default:
+	}
+}
+
+// EnsureDefaultKeyBindings adds any missing key binding entries.
+// This allows older config files to be upgraded automatically when loaded.
+func (s *Service) EnsureDefaultKeyBindings() {
+	if s.KeyConfig == nil {
+		s.KeyConfig = make(map[command.Command]keyinfo.KeyData)
+	}
+
+	defaults := []command.Command{
+		command.SPLIT,
+		command.UNDO,
+		command.SKIP,
+		command.PAUSE,
+		command.RESET,
+		command.COMPARISON_LEFT,
+		command.COMPARISON_RIGHT,
+	}
+
+	for _, c := range defaults {
+		if _, ok := s.KeyConfig[c]; !ok {
+			s.KeyConfig[c] = keyinfo.KeyData{}
+		}
 	}
 }
