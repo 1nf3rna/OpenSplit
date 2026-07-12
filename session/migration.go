@@ -72,11 +72,11 @@ func UpgradeSplitFile(oldFile, newFile *SplitFile) {
 //
 //	preserve manual value
 func mergeStatistic(dst *time.Duration, src time.Duration) bool {
-	switch {
-	case *dst == -1:
+	switch *dst {
+	case -1:
 		return false
 
-	case *dst == 0:
+	case 0:
 		if src > 0 {
 			*dst = src
 		}
