@@ -173,7 +173,7 @@ export default function SegmentList({ sessionPayload, comparison }: SegmentListP
         return result;
     }, [sessionPayload.leaf_segments, parentById]);
 
-    //     // Determine the final leaf segment id (so we can render it separately)
+    // Determine the final leaf segment id (so we can render it separately)
     const finalLeafId = useMemo(() => {
         const leaves = sessionPayload.leaf_segments;
 
@@ -246,21 +246,6 @@ export default function SegmentList({ sessionPayload, comparison }: SegmentListP
         });
     };
 
-    // const { mainRows, finalRow } = SegmentTree({
-    //     sessionPayload,
-    //     flatSegments,
-    //     targets,
-    //     completeClassName,
-    //     leafIndexById,
-    //     parentById,
-    //     expandedParents,
-    //     lastLeafByParentId,
-    //     leavesByParentId,
-    //     finalLeafId,
-    //     activeRowRef,
-    //     toggleParent,
-    // });
-
     return (
         <div id="splitList" className={completeClassName}>
             <SplitGameInfo sessionPayload={sessionPayload} completeClassName={completeClassName} />
@@ -282,17 +267,6 @@ export default function SegmentList({ sessionPayload, comparison }: SegmentListP
                         toggleParent={toggleParent}
                     />
                 </div>
-                {/*<div ref={containerRef} id="splitContainer" className={completeClassName}>
-                    <table cellSpacing="0" className={completeClassName}>
-                        <tbody>{mainRows}</tbody>
-                    </table>
-                </div>
-
-                <div id="finalSegment" className={completeClassName}>
-                    <table className={completeClassName}>
-                        <tbody>{finalRow}</tbody>
-                    </table>
-                </div>*/}
             </div>
         </div>
     );
