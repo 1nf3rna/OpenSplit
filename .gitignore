@@ -6,7 +6,6 @@ coverage.out
 # Editor/IDE
 .vscode/
 .zed/
-tools/livesplitImageExtractor/*
 
 # Ignoring generated stuff
 frontend/node_modules/
