@@ -15,7 +15,9 @@ type SplitFile struct {
 	GameID       string
 	GameCategory string
 	CategoryID   string
-	Version      int
+	Variables    []Variable
+
+	Version int
 
 	SelectedSkin string
 
@@ -35,6 +37,13 @@ type SplitFile struct {
 	WindowY      int
 	WindowHeight int
 	WindowWidth  int
+}
+
+type Variable struct {
+	ID      string
+	Name    string
+	ValueID string // speedrun.com value ID
+	Label   string // display label
 }
 
 // WorldRecord stores optional world record information displayed in the UI.
@@ -241,7 +250,9 @@ func DeepCopySplitFile(inFile *SplitFile) SplitFile {
 		GameID:       inFile.GameID,
 		GameCategory: inFile.GameCategory,
 		CategoryID:   inFile.CategoryID,
-		Version:      inFile.Version,
+		Variables:    inFile.Variables,
+
+		Version: inFile.Version,
 
 		SelectedSkin: inFile.SelectedSkin,
 

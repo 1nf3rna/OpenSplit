@@ -300,6 +300,8 @@ export default function SegmentList({ sessionPayload, comparison }: SplitListPar
             game: sessionPayload.loaded_split_file?.game_name,
             segments: sessionPayload.leaf_segments?.length,
         });
+        console.log(sessionPayload.loaded_split_file);
+        console.log(sessionPayload.loaded_split_file?.variables);
     }, [sessionPayload]);
 
     // Builds cached comparison targets whenever comparison mode changes.
@@ -613,6 +615,14 @@ export default function SegmentList({ sessionPayload, comparison }: SplitListPar
                 <h2 id="gameCategory" className={completeClassName}>
                     <small>{sessionPayload.loaded_split_file?.game_category}</small>
                 </h2>
+
+                {sessionPayload.loaded_split_file?.variables
+                    .filter((v) => v.label?.trim())
+                    .map((v) => (
+                        <div key={v.id} className="game-variable">
+                            {v.label}
+                        </div>
+                    ))}
                 <div id="attempts" className={completeClassName}>
                     {sessionPayload.loaded_split_file?.attempts}
                 </div>

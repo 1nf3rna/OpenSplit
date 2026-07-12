@@ -14,12 +14,21 @@ import RunPayload from "./runPayload";
 import SegmentPayload from "./segmentPayload";
 import WorldRecord from "./worldRecord";
 
+export type SplitVariable = {
+    id: string;
+    name: string;
+    value: string;
+    label: string;
+};
+
 export default class SplitFilePayload {
     id: string = "";
     game_name: string = "";
     speedrun_game_id = "";
     game_category: string = "";
     speedrun_game_category_id = "";
+    variables: SplitVariable[] = [];
+
     version: number = 0;
 
     selected_skin?: string;

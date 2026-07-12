@@ -26,7 +26,9 @@ func DomainSplitFileToDTO(sf session.SplitFile) dto.SplitFile {
 		GameID:       sf.GameID,
 		GameCategory: sf.GameCategory,
 		CategoryID:   sf.CategoryID,
-		Version:      sf.Version,
+		Variables:    domainVariablesToDTO(sf.Variables),
+
+		Version: sf.Version,
 
 		SelectedSkin: sf.SelectedSkin,
 
@@ -91,6 +93,8 @@ func DTOSplitFileToDomain(payload dto.SplitFile) (session.SplitFile, error) {
 	newSplitFile.GameID = payload.GameID
 	newSplitFile.GameCategory = payload.GameCategory
 	newSplitFile.CategoryID = payload.CategoryID
+	newSplitFile.Variables = dtoVariablesToDomain(payload.Variables)
+
 	newSplitFile.Version = payload.Version
 
 	newSplitFile.SelectedSkin = payload.SelectedSkin
@@ -289,5 +293,35 @@ func dtoSplitsToDomain(splits map[string]dto.Split) map[uuid.UUID]session.Split 
 			CurrentDuration:   time.Duration(split.CurrentDuration) * time.Millisecond,
 		}
 	}
+	return out
+}
+
+func domainVariablesToDTO(vars []session.Variable) []dto.Variable {
+	out := make([]dto.Variable, len(vars))
+
+	for i, v := range vars {
+		out[i] = dto.Variable{
+			ID:      v.ID,
+			Name:    v.Name,
+			ValueID: v.ValueID,
+			Label:   v.Label,
+		}
+	}
+
+	return out
+}
+
+func dtoVariablesToDomain(vars []dto.Variable) []session.Variable {
+	out := make([]session.Variable, len(vars))
+
+	for i, v := range vars {
+		out[i] = session.Variable{
+			ID:      v.ID,
+			Name:    v.Name,
+			ValueID: v.ValueID,
+			Label:   v.Label,
+		}
+	}
+
 	return out
 }

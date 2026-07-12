@@ -13,21 +13,30 @@ import (
 
 // VariablesSearchResult is the frontend-friendly representation of a variable search for a category.
 type VariablesSearchResult struct {
-	Data []VariablesSearchItem `json:"data"`
+	Data []VariableItem `json:"data"`
 }
 
-// VariablesSearchItem describes a speedrun.com variable.
-type VariablesSearchItem struct {
-	ID     string    `json:"id"`
-	Name   string    `json:"name"`
-	Values []Choices `json:"values"`
+// VariableItem describes a speedrun.com variable.
+type VariableItem struct {
+	ID            string         `json:"id"`
+	Name          string         `json:"name"`
+	Category      *string        `json:"category"`
+	IsSubcategory bool           `json:"is-subcategory"`
+	Scope         VariableScope  `json:"scope"`
+	Mandatory     bool           `json:"mandatory"`
+	Values        VariableValues `json:"values"`
 }
 
-type Choices struct {
-	Values []Variable `json:"values"`
+type VariableScope struct {
+	Type string `json:"type"`
 }
 
-type Variable struct {
+type VariableValues struct {
+	Default *string                  `json:"default"`
+	Values  map[string]VariableValue `json:"values"`
+}
+
+type VariableValue struct {
 	Label string `json:"label"`
 }
 

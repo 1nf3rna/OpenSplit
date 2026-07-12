@@ -12,7 +12,7 @@ import React, { useEffect, useState } from "react";
 
 import { Dispatch, ExportSplitFile } from "../../../wailsjs/go/dispatcher/Service";
 import { GetAvailableSkins } from "../../../wailsjs/go/skin/Service";
-import { Platforms, SearchCategories, SearchGames } from "../../../wailsjs/go/speedrun/Service";
+import { Platforms, SearchCategories, SearchGames, SearchVariables } from "../../../wailsjs/go/speedrun/Service";
 import { WindowCenter, WindowSetSize } from "../../../wailsjs/runtime";
 import { useClickOutside } from "../../hooks/useClickOutside";
 import { Command } from "../../models/command";
@@ -61,6 +61,22 @@ type Category = {
     name: string;
 };
 
+type SelectedVariable = {
+    name: string;
+    value: string;
+    label: string;
+};
+
+type Variable = {
+    id: string;
+    name: string;
+    default?: string;
+    options: {
+        id: string;
+        label: string;
+    }[];
+};
+
 export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
     const editing = splitFilePayload != null;
 
@@ -74,6 +90,9 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
     const [categoryName, setCategoryName] = useState(splitFilePayload?.game_category ?? "");
     const [categoryID, setCategoryID] = useState(splitFilePayload?.speedrun_game_category_id ?? "");
     const [categories, setCategories] = useState<Category[]>([]);
+
+    const [variables, setVariables] = useState<Variable[]>([]);
+    const [selectedVariables, setSelectedVariables] = useState<Record<string, SelectedVariable>>({});
 
     const [attempts, setAttempts] = useState(splitFilePayload?.attempts ?? 0);
 
@@ -256,6 +275,50 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
         void update();
     }, [gameID, games]);
 
+    useEffect(() => {
+        if (!categoryID) {
+            setVariables([]);
+            setSelectedVariables({});
+            return;
+        }
+
+        SearchVariables(categoryID).then((result) => {
+            setVariables(
+                result.data.map((v) => ({
+                    id: v.id,
+                    name: v.name,
+                    default: v.values.default,
+                    options: Object.entries(v.values.values).map(([id, value]) => ({
+                        id,
+                        label: value.label,
+                    })),
+                })),
+            );
+
+            const values: Record<string, SelectedVariable> = {};
+
+            (splitFilePayload?.variables ?? []).forEach((v) => {
+                values[v.id] = {
+                    name: v.name,
+                    value: v.value,
+                    label: v.label,
+                };
+            });
+
+            result.data.forEach((v) => {
+                if (!values[v.id]) {
+                    values[v.id] = {
+                        name: v.name,
+                        value: "",
+                        label: "",
+                    };
+                }
+            });
+
+            setSelectedVariables(values);
+        });
+    }, [categoryID]);
+
     const handleOffsetChange = (value: string) => {
         if (/^-?\d*$/.test(value)) {
             setOffsetText(value);
@@ -315,6 +378,13 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
             game_category: categoryName,
             speedrun_game_category_id: categoryID,
 
+            variables: Object.entries(selectedVariables).map(([id, v]) => ({
+                id,
+                name: v.name,
+                value: v.value,
+                label: v.label,
+            })),
+
             version: splitFilePayload?.version ?? 0,
 
             selected_skin: selectedSkin,
@@ -343,6 +413,7 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
         console.debug("Saving split file", {
             id: payload.id,
             segments: payload.segments.length,
+            variables: payload.variables,
             game: payload.game_name,
             category: payload.game_category,
         });
@@ -532,6 +603,44 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
                         )}
                     </div>
                 </div>
+                {variables.length > 0 && (
+                    <>
+                        <label>Variables</label>
+
+                        <div className="variable-row">
+                            {variables.map((variable) => (
+                                <div key={variable.id} className="variable">
+                                    <label>{variable.name}</label>
+
+                                    <select
+                                        value={selectedVariables[variable.id]?.value ?? ""}
+                                        // value={selectedVariables[variable.id] ?? ""}
+                                        onChange={(e) => {
+                                            const option = variable.options.find((o) => o.id === e.target.value);
+
+                                            setSelectedVariables((prev) => ({
+                                                ...prev,
+                                                [variable.id]: {
+                                                    name: variable.name,
+                                                    value: e.target.value,
+                                                    label: option?.label ?? "",
+                                                },
+                                            }));
+                                        }}
+                                    >
+                                        <option value=""></option>
+
+                                        {variable.options.map((option) => (
+                                            <option key={option.id} value={option.id}>
+                                                {option.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            ))}
+                        </div>
+                    </>
+                )}
                 <div
                     className="row"
                     style={{

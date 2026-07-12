@@ -18,14 +18,23 @@ type Split struct {
 	CurrentDuration   int64  `json:"current_duration"`
 }
 
+type Variable struct {
+	ID      string `json:"id"`
+	Name    string `json:"name"`
+	ValueID string `json:"value"`
+	Label   string `json:"label"`
+}
+
 // SplitFile represents the data and history of a game/category combo.
 type SplitFile struct {
-	ID           string `json:"id"`
-	GameName     string `json:"game_name"`
-	GameID       string `json:"speedrun_game_id"`
-	GameCategory string `json:"game_category"`
-	CategoryID   string `json:"speedrun_game_category_id"`
-	Version      int    `json:"version"`
+	ID           string     `json:"id"`
+	GameName     string     `json:"game_name"`
+	GameID       string     `json:"speedrun_game_id"`
+	GameCategory string     `json:"game_category"`
+	CategoryID   string     `json:"speedrun_game_category_id"`
+	Variables    []Variable `json:"variables"`
+
+	Version int `json:"version"`
 
 	SelectedSkin string `json:"selected_skin"`
 
