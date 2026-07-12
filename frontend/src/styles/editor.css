@@ -1,0 +1,24 @@
+@layer components {
+    .variable-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        align-items: flex-start;
+    }
+
+    .variable {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 180px;
+        flex: 1 1 180px;
+    }
+
+    .variable label {
+        font-weight: 600;
+    }
+
+    .variable select {
+        width: 100%;
+    }
+}

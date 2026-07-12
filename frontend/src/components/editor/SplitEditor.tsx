@@ -610,11 +610,11 @@ export default function SplitEditor({ splitFilePayload }: SplitEditorParams) {
                         <div className="variable-row">
                             {variables.map((variable) => (
                                 <div key={variable.id} className="variable">
-                                    <label>{variable.name}</label>
+                                    <label htmlFor={`variable-${variable.id}`}>{variable.name}</label>
 
                                     <select
+                                        id={`variable-${variable.id}`}
                                         value={selectedVariables[variable.id]?.value ?? ""}
-                                        // value={selectedVariables[variable.id] ?? ""}
                                         onChange={(e) => {
                                             const option = variable.options.find((o) => o.id === e.target.value);
 
