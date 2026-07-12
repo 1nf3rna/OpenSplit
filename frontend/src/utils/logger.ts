@@ -10,10 +10,3 @@ export const log = {
     warn: (...args: unknown[]) => console.warn(...args),
     error: (...args: unknown[]) => console.error(...args),
 };
-
-// export const log = {
-//     debug: (...args: unknown[]) => config.debug && console.debug(...args),
-//     info: (...args: unknown[]) => console.info(...args),
-//     warn: (...args: unknown[]) => console.warn(...args),
-//     error: (...args: unknown[]) => console.error(...args),
-// };
