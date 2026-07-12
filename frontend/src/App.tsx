@@ -93,7 +93,7 @@ function changeSkin(address: string) {
         document.head.appendChild(link);
     }
     link.href = address;
-    console.log("changed skin to ", link.href);
+    log.info("changed skin to ", link.href);
 }
 
 function useDetectWindowChange() {

@@ -300,8 +300,8 @@ export default function SegmentList({ sessionPayload, comparison }: SplitListPar
             game: sessionPayload.loaded_split_file?.game_name,
             segments: sessionPayload.leaf_segments?.length,
         });
-        console.log(sessionPayload.loaded_split_file);
-        console.log(sessionPayload.loaded_split_file?.variables);
+        log.debug(sessionPayload.loaded_split_file);
+        log.debug(sessionPayload.loaded_split_file?.variables);
     }, [sessionPayload]);
 
     // Builds cached comparison targets whenever comparison mode changes.
