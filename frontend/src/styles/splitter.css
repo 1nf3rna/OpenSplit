@@ -62,6 +62,23 @@
         overflow-y: auto;
     }
 
+    #splitContainer::-webkit-scrollbar {
+        width: 0;
+    }
+
+    #splitContainer:hover::-webkit-scrollbar {
+        width: 10px;
+    }
+
+    #splitContainer::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.4);
+        border-radius: 6px;
+    }
+
+    #splitContainer::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
     #finalSegment {
         flex: 0 0 auto;
     }
@@ -79,12 +96,35 @@
     }
 
     .splitName {
+        display: flex;
+        align-items: center;
+        gap: 6px;
         width: var(--segment-name-width);
+    }
+
+    .splitName img {
+        flex-shrink: 0;
+    }
+
+    .segment-icon {
+        width: 18px;
+        height: 18px;
+        object-fit: contain;
+        margin-right: 6px;
+        vertical-align: middle;
+        border-radius: 2px;
     }
 
     .splitDelta {
         text-align: var(--split-delta-text-align);
         font-family: var(--split-delta-font-family), monospace;
+    }
+
+    .comparison-mode {
+        text-align: center;
+        font-size: 0.85rem;
+        padding: 4px 0;
+        user-select: none;
     }
 
     .splitComparison {

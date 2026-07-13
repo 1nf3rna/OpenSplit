@@ -33,7 +33,7 @@ export default function Welcome() {
             </button>
 
             <button
-                style={{ marginTop: 30 }}
+                className="welcome-exit"
                 onClick={async () => {
                     await Dispatch(Command.QUIT, null);
                 }}
@@ -41,7 +41,7 @@ export default function Welcome() {
                 Exit OpenSplit
             </button>
 
-            <div id="cw">
+            <div className="welcome-footer">
                 <p>Copyright ZellyDev LLC - ZellyDev Games {new Date().getFullYear()}</p>
             </div>
         </div>

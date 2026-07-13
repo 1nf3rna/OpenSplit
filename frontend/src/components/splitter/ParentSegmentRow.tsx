@@ -49,21 +49,7 @@ export default function ParentSegmentRow({
                     </button>
                 )}
 
-                {segment.icon && (
-                    <img
-                        src={segment.icon}
-                        alt=""
-                        draggable={false}
-                        style={{
-                            width: 18,
-                            height: 18,
-                            objectFit: "contain",
-                            marginRight: 6,
-                            verticalAlign: "middle",
-                            borderRadius: 2,
-                        }}
-                    />
-                )}
+                {segment.icon && <img src={segment.icon} alt="" draggable={false} className="segment-icon" />}
 
                 <strong>{segment.name}</strong>
             </td>

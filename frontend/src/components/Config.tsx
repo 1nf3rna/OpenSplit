@@ -140,10 +140,10 @@ export default function Config({ configPayload }: ConfigParams) {
 
             <hr />
 
-            <div id="skins" style={{ marginBottom: 20 }}>
+            <div className="config-section config-skins">
                 <h3>Active Skin</h3>
                 <select
-                    style={{ marginLeft: 20, width: "50%" }}
+                    className="config-skin-select"
                     id="selectedSkin"
                     value={config.selected_skin}
                     onChange={(e) =>
