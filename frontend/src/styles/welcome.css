@@ -19,7 +19,7 @@
         margin-top: 5px;
     }
 
-    .welcome #cw {
+    .welcome-footer {
         display: flex;
         flex: 1;
         flex-direction: column;
