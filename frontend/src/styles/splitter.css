@@ -95,13 +95,6 @@
         border-right: 0;
     }
 
-    .splitName {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        width: var(--segment-name-width);
-    }
-
     .splitName img {
         flex-shrink: 0;
     }
