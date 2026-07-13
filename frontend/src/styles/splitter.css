@@ -6,13 +6,6 @@
         flex-direction: var(--splitlist-direction);
     }
 
-    #splitList {
-        display: flex;
-        flex: 1;
-        min-height: 0;
-        flex-direction: var(--splitlist-direction);
-    }
-
     #gameInfo {
         display: flex;
         flex-direction: column;
@@ -81,6 +74,13 @@
 
     #finalSegment {
         flex: 0 0 auto;
+    }
+
+    #splitList {
+        display: flex;
+        flex: 1;
+        min-height: 0;
+        flex-direction: var(--splitlist-direction);
     }
 
     #splitList table {
