@@ -15,10 +15,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import SegmentPayload from "../../models/segmentPayload";
 import SessionPayload from "../../models/sessionPayload";
 import { log } from "../../utils/logger";
-import SegmentTree from "./SegmentTree";
 import { FlatSegment, flattenSegments, getAncestorIds, isElementFullyVisible, Targets } from "./segmentUtils";
 import SplitGameInfo from "./SplitGameInfo";
 import { CompareAgainst, Comparison } from "./Splitter";
+import { useSegmentRows } from "./useSegmentRows";
 
 type SegmentListParameters = {
     sessionPayload: SessionPayload;
@@ -246,26 +246,36 @@ export default function SegmentList({ sessionPayload, comparison }: SegmentListP
         });
     };
 
+    const { rows, finalRow } = useSegmentRows({
+        sessionPayload,
+        flatSegments,
+        targets,
+        completeClassName,
+        leafIndexById,
+        parentById,
+        expandedParents,
+        lastLeafByParentId,
+        leavesByParentId,
+        finalLeafId,
+        activeRowRef,
+        toggleParent,
+    });
+
     return (
         <div id="splitList" className={completeClassName}>
             <SplitGameInfo sessionPayload={sessionPayload} completeClassName={completeClassName} />
 
             <div id="splitBody" className={completeClassName}>
                 <div ref={containerRef} id="splitContainer" className={completeClassName}>
-                    <SegmentTree
-                        sessionPayload={sessionPayload}
-                        flatSegments={flatSegments}
-                        targets={targets}
-                        completeClassName={completeClassName}
-                        leafIndexById={leafIndexById}
-                        parentById={parentById}
-                        expandedParents={expandedParents}
-                        lastLeafByParentId={lastLeafByParentId}
-                        leavesByParentId={leavesByParentId}
-                        finalLeafId={finalLeafId}
-                        activeRowRef={activeRowRef}
-                        toggleParent={toggleParent}
-                    />
+                    <table cellSpacing={0} className={completeClassName}>
+                        <tbody>{rows}</tbody>
+                    </table>
+                </div>
+
+                <div id="finalSegment" className={completeClassName}>
+                    <table cellSpacing={0} className={completeClassName}>
+                        <tbody>{finalRow}</tbody>
+                    </table>
                 </div>
             </div>
         </div>
