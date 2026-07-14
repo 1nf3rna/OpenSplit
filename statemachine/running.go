@@ -21,6 +21,21 @@ func NewRunningState() (*Running, error) {
 	return &Running{}, nil
 }
 
+func isHotkeyCommand(c command.Command) bool {
+	switch c {
+	case command.SPLIT,
+		command.UNDO,
+		command.SKIP,
+		command.PAUSE,
+		command.RESET,
+		command.COMPARISON_LEFT,
+		command.COMPARISON_RIGHT:
+		return true
+	default:
+		return false
+	}
+}
+
 func (r *Running) OnEnter() error {
 	machine.saveOnWindowDimensionChanges = true
 	sessionDto := adapters.DomainToDTO(machine.sessionService)
@@ -31,6 +46,11 @@ func (r *Running) OnEnter() error {
 			}
 
 			for c, keyData := range machine.configService.KeyConfig {
+				// Ignore stale/invalid commands stored in old configs
+				if !isHotkeyCommand(c) {
+					continue
+				}
+
 				if keyData.KeyCode != data.KeyCode {
 					continue
 				}
@@ -58,12 +78,9 @@ func (r *Running) OnEnter() error {
 					if !match {
 						continue
 					}
-					_, _ = machine.ReceiveDispatch(c, nil)
-					return
-				} else {
-					_, _ = machine.ReceiveDispatch(c, nil)
-					return
 				}
+				_, _ = machine.ReceiveDispatch(c, nil)
+				return
 			}
 		})
 

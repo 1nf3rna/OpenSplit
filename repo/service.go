@@ -117,7 +117,7 @@ func (s *Service) SaveSplitFile(splitFile dto.SplitFile) error {
 							existingDomain.Version,
 							newDomain.Version,
 						)
-						newDomain.BuildStats()
+						newDomain.RebuildStatistics()
 						splitFile = adapters.DomainSplitFileToDTO(newDomain)
 					}
 				}

@@ -1,11 +1,9 @@
 package session
 
 import (
-	"errors"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/zellydev-games/opensplit/logger"
 )
 
 // SplitFile contains a game's split definitions together with run history.
@@ -64,176 +62,6 @@ func (s *SplitFile) DeepCopyLeafSegments() []Segment {
 	return deepCopySegments(out)
 }
 
-func (s *SplitFile) BuildStats() {
-	if s == nil {
-		return
-	}
-	logger.Debugf(
-		logModule,
-		"rebuilding statistics (%d runs)",
-		len(s.Runs),
-	)
-
-	leafSegments := getLeafSegments(s.Segments, nil)
-	if len(leafSegments) == 0 {
-		s.SOB = 0
-		s.PB = nil
-		return
-	}
-
-	golds := s.computeGolds()
-	averages := s.computeRollingAverages()
-
-	var sob time.Duration
-
-	for _, leaf := range leafSegments {
-		id := leaf.ID
-
-		if gold, ok := golds[id]; ok {
-			leaf.Gold = gold
-			sob += gold
-		} else if leaf.Gold <= 0 {
-			leaf.Gold = 0
-		}
-
-		if avg, ok := averages[id]; ok {
-			leaf.Average = avg
-		} else if leaf.Average <= 0 {
-			leaf.Average = 0
-		}
-	}
-
-	pb, _, err := getPB(s.Runs)
-	if err != nil {
-		s.PB = nil
-		s.SOB = sob
-		return
-	}
-
-	s.PB = pb
-	s.SOB = sob
-
-	logger.Debugf(
-		logModule,
-		"statistics rebuilt SOB=%d PB=%v",
-		s.SOB.Milliseconds(),
-		s.PB != nil,
-	)
-	for _, leaf := range leafSegments {
-		if leaf.PB > 0 {
-			continue
-		}
-
-		if split, ok := pb.Splits[leaf.ID]; ok {
-			leaf.PB = split.CurrentDuration
-		}
-	}
-}
-
-func (s *SplitFile) computeGolds() map[uuid.UUID]time.Duration {
-	golds := make(map[uuid.UUID]time.Duration)
-
-	for _, run := range s.Runs {
-		if !run.Completed {
-			continue
-		}
-
-		for id, split := range run.Splits {
-			if cur, ok := golds[id]; !ok || split.CurrentDuration < cur {
-				golds[id] = split.CurrentDuration
-			}
-		}
-	}
-
-	return golds
-}
-
-func (s *SplitFile) rollingRuns() []Run {
-	var completed []Run
-
-	for _, run := range s.Runs {
-		if !run.Completed {
-			continue
-		}
-
-		if run.SplitFileVersion != s.Version {
-			continue
-		}
-
-		completed = append(completed, run)
-	}
-
-	if len(completed) == 0 {
-		return nil
-	}
-
-	window := s.RollingAverageRuns
-	if window <= 0 {
-		window = 10
-	}
-
-	if s.Version == 0 && len(completed) < window {
-		return completed
-	}
-
-	if len(completed) <= window {
-		return completed
-	}
-
-	return completed[len(completed)-window:]
-}
-
-func (s *SplitFile) computeRollingAverages() map[uuid.UUID]time.Duration {
-	runs := s.rollingRuns()
-
-	sums := make(map[uuid.UUID]time.Duration)
-	counts := make(map[uuid.UUID]int)
-
-	for _, run := range runs {
-		for id, split := range run.Splits {
-			sums[id] += split.CurrentDuration
-			counts[id]++
-		}
-	}
-
-	averages := make(map[uuid.UUID]time.Duration)
-
-	for id, sum := range sums {
-		if counts[id] == 0 {
-			continue
-		}
-
-		averages[id] = sum / time.Duration(counts[id])
-	}
-
-	return averages
-}
-
-func (s *SplitFile) UpdatePBSegments(pb *Run) {
-	if pb == nil {
-		return
-	}
-
-	leafSegments := getLeafSegments(s.Segments, nil)
-
-	for _, leaf := range leafSegments {
-		split, ok := pb.Splits[leaf.ID]
-		if !ok {
-			continue
-		}
-
-		// if leaf.PB <= 0 || split.CurrentDuration < leaf.PB {
-		leaf.PB = split.CurrentDuration
-		// }
-	}
-
-	s.PB = pb
-	logger.Debug(
-		logModule,
-		"personal best updated",
-	)
-}
-
 func DeepCopySplitFile(inFile *SplitFile) SplitFile {
 	segments := deepCopySegments(inFile.Segments)
 	runs := deepCopyRuns(inFile.Runs)
@@ -273,30 +101,6 @@ func DeepCopySplitFile(inFile *SplitFile) SplitFile {
 		WindowWidth:  inFile.WindowWidth,
 		WindowHeight: inFile.WindowHeight,
 	}
-}
-
-func getPB(runs []Run) (*Run, time.Duration, error) {
-	if len(runs) == 0 {
-		return nil, 0, errors.New("no runs found")
-	}
-
-	var fastestRun *Run = nil
-	fastestTotal := time.Duration(0)
-	for i, run := range runs {
-		if !run.Completed {
-			continue
-		}
-		if fastestRun == nil || run.TotalTime < fastestTotal {
-			fastestRun = &runs[i]
-			fastestTotal = run.TotalTime
-		}
-	}
-
-	if fastestRun == nil {
-		return nil, time.Duration(0), errors.New("no completed runs found")
-	}
-
-	return fastestRun, fastestTotal, nil
 }
 
 func getLeafSegments(segments []Segment, out []*Segment) []*Segment {

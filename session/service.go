@@ -134,6 +134,15 @@ func (s *Service) refreshLeafSegments() {
 	s.leafSegments = getLeafSegments(s.loadedSplitFile.Segments, nil)
 }
 
+func (sf *SplitFile) InitializeStatistics(window int) {
+	if window <= 0 {
+		window = 20
+	}
+
+	sf.RollingAverageRuns = window
+	sf.RebuildStatistics()
+}
+
 func (s *Service) SetLoadedSplitFile(sf SplitFile) {
 	logger.Debugf(logModule, "setting loaded splitfile to %s", sf.GameName)
 
@@ -146,26 +155,12 @@ func (s *Service) SetLoadedSplitFile(sf SplitFile) {
 	s.loadedSplitFile = &copy
 
 	// apply config-driven rolling window
-	window := 10
+	window := 20
 	if s.configService != nil && s.configService.RollingAverageRuns > 0 {
 		window = s.configService.RollingAverageRuns
 	}
 
-	s.loadedSplitFile.RollingAverageRuns = window
-
-	s.timer.Reset(&sf.Offset)
-
-	logger.Infof(
-		logModule,
-		"loaded splitfile offset=%d rollingAvg=%d",
-		sf.Offset.Milliseconds(),
-		window,
-	)
-
-	s.refreshLeafSegments()
-	s.leafSegments = getLeafSegments(sf.Segments, nil)
-
-	s.loadedSplitFile.RebuildStatistics()
+	s.loadedSplitFile.InitializeStatistics(window)
 
 	s.currentRun = nil
 	s.currentSegmentIndex = -1
@@ -506,18 +501,12 @@ func (s *Service) PersistRunToSession() {
 		return
 	}
 
-	s.loadedSplitFile.Runs = append(s.loadedSplitFile.Runs, *s.currentRun)
-
-	oldPB := s.loadedSplitFile.PB
-	if oldPB == nil || s.currentRun.TotalTime < oldPB.TotalTime {
-		s.loadedSplitFile.UpdatePBSegments(s.currentRun)
-	}
-
+	window := 20
 	if s.configService != nil {
-		s.loadedSplitFile.RollingAverageRuns = s.configService.RollingAverageRuns
+		window = s.configService.RollingAverageRuns
 	}
 
-	s.loadedSplitFile.RebuildStatistics()
+	s.loadedSplitFile.AddRun(s.currentRun, window)
 
 	logger.Infof(
 		logModule,

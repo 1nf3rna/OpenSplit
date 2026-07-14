@@ -64,7 +64,7 @@ func TestBuildStats(t *testing.T) {
 				CurrentDuration:   time.Second * 4,
 			}}}}
 
-	sf.BuildStats()
+	sf.RebuildStatistics()
 	want := (sf.Runs[0].Splits[uid].CurrentDuration +
 		sf.Runs[1].Splits[uid].CurrentDuration +
 		sf.Runs[2].Splits[uid].CurrentDuration) / 3
