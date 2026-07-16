@@ -171,6 +171,7 @@ func (s *Service) SetLoadedSplitFile(sf SplitFile) {
 
 	s.loadedSplitFile.InitializeStatistics(window)
 
+	s.resetLocked()
 	s.currentRun = nil
 	s.currentSegmentIndex = -1
 	s.sessionState = Idle
