@@ -153,6 +153,15 @@ func (s *Service) SetLoadedSplitFile(sf SplitFile) {
 	// session owns its own copy
 	copy := DeepCopySplitFile(&sf)
 	s.loadedSplitFile = &copy
+	s.refreshLeafSegments()
+
+	logger.Infof(
+		logModule,
+		"%s loaded in session (segments=%d leaf=%d)",
+		sf.GameName,
+		len(s.loadedSplitFile.Segments),
+		len(s.leafSegments),
+	)
 
 	// apply config-driven rolling window
 	window := 20
@@ -534,8 +543,7 @@ func (s *Service) startNewRun() SplitResult {
 	}
 
 	if len(s.leafSegments) == 0 {
-		logger.Debug(logModule, "Split() called on run with no DeepCopyLeafSegments, NO-OP")
-		return SplitNoop
+		logger.Warn(logModule, "loaded split file contains no leaf segments")
 	}
 
 	s.timer.Start()
