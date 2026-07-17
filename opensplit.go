@@ -26,6 +26,7 @@ import (
 	"github.com/zellydev-games/opensplit/hotkeys"
 	"github.com/zellydev-games/opensplit/logger"
 	"github.com/zellydev-games/opensplit/platform"
+	"github.com/zellydev-games/opensplit/racetimegg"
 	"github.com/zellydev-games/opensplit/repo"
 	"github.com/zellydev-games/opensplit/session"
 	"github.com/zellydev-games/opensplit/skin"
@@ -48,6 +49,8 @@ var (
 	shutdownDone = make(chan struct{})
 )
 
+// main initializes all OpenSplit services, starts the Wails application,
+// and coordinates application startup and shutdown.
 func main() {
 	runtimeProvider := platform.NewWailsRuntime()
 	fileProvider := platform.NewFileRuntime()
@@ -67,7 +70,7 @@ func main() {
 	watcher := platform.NewDirChangeTracker()
 	skinService, skinUpdatedCh := skin.NewService(skinDir, configService, repoService, watcher)
 
-	sessionService, sessionUpdateChannel := session.NewService(timerService)
+	sessionService, sessionUpdateChannel := session.NewService(timerService, configService)
 	machine := statemachine.NewMachine(runtimeProvider, repoService, sessionService, configService, skinService, speedrunService)
 
 	// Build UI bridges with model update channels
@@ -130,9 +133,13 @@ func main() {
 			configUIBridge.StartUIPump()
 			skinBridge.StartUIPump()
 
-			// Start remote control
+			// Start autosplitter remote control
 			remoteControl := autosplitter.NewSocket(commandDispatcher, 6767)
 			go remoteControl.Listen()
+
+			// Start racetimeGG remote control
+			racetimeControl := racetimegg.NewSocket(commandDispatcher, 6768)
+			go racetimeControl.Listen()
 
 			err = skinService.Startup()
 			if err != nil {
@@ -170,6 +177,10 @@ func main() {
 	}
 }
 
+// setupLogging configures console and file logging.
+//
+// Existing log files are rotated and compressed before startup, and
+// retention is enforced on archived logs.
 func setupLogging(logDir string) {
 	logPath := path.Join(logDir, "OpenSplit.log")
 
@@ -179,10 +190,12 @@ func setupLogging(logDir string) {
 		rotated := logPath + "." + ts
 		compressed := rotated + ".gz"
 
+		logger.Infof(logModule, "rotating log %s", logPath)
 		if err := os.Rename(logPath, rotated); err != nil {
 			panic(err)
 		}
 
+		logger.Infof(logModule, "compressed previous log to %s", compressed)
 		if err := compressFile(rotated, compressed); err != nil {
 			panic(err)
 		}
@@ -214,6 +227,8 @@ func setupLogging(logDir string) {
 //	return http.StripPrefix("/skins/", http.FileServer(http.Dir(skinDir)))
 //}
 
+// setupPaths creates the OpenSplit configuration directory structure
+// and returns the application, log, skin, and split-file directories.
 func setupPaths(fileProvider repo.FileProvider) (string, string, string, string) {
 	base, err := fileProvider.UserConfigDir()
 	if err != nil {
@@ -221,9 +236,14 @@ func setupPaths(fileProvider repo.FileProvider) (string, string, string, string)
 	}
 
 	appDir := filepath.Join(base, "OpenSplit")
+	logger.Infof(logModule, "application directories:")
 	logDir := filepath.Join(appDir, "logs")
+	logger.Infof(logModule, "  logs=%s", logDir)
 	skinDir := filepath.Join(appDir, "Skins")
+	logger.Infof(logModule, "  skins=%s", skinDir)
 	splitFileDir := filepath.Join(appDir, "Split Files")
+	logger.Infof(logModule, "  splitfiles=%s", splitFileDir)
+
 	err = os.MkdirAll(appDir, 0755)
 	if err != nil {
 		panic(err)
@@ -247,6 +267,8 @@ func setupPaths(fileProvider repo.FileProvider) (string, string, string, string)
 	return appDir, logDir, skinDir, splitFileDir
 }
 
+// startInterruptListener installs signal handlers so OpenSplit performs
+// a graceful shutdown when interrupted by the operating system.
 func startInterruptListener(ctx context.Context, hotkeyProvider statemachine.HotkeyProvider) {
 	go func() {
 		ch := make(chan os.Signal, 1)
@@ -271,14 +293,19 @@ func startInterruptListener(ctx context.Context, hotkeyProvider statemachine.Hot
 	}()
 }
 
+// gracefulShutdown performs one-time cleanup before the application exits.
 func gracefulShutdown(hotkeyService statemachine.HotkeyProvider) {
 	shutdownOnce.Do(func() {
-		_ = hotkeyService.Unhook()
+		logger.Info(logModule, "performing graceful shutdown")
+		if err := hotkeyService.Unhook(); err != nil {
+			logger.Errorf(logModule, "failed to unhook hotkeys: %v", err)
+		}
 		logger.Info(logModule, "shutdown complete")
 		close(shutdownDone)
 	})
 }
 
+// compressFile compresses src into a gzip archive at dst.
 func compressFile(src, dst string) error {
 	in, err := os.Open(src)
 	if err != nil {
@@ -305,6 +332,8 @@ func compressFile(src, dst string) error {
 	return err
 }
 
+// enforceLogRetention removes the oldest archived log files so that at
+// most max compressed logs remain.
 func enforceLogRetention(dir, base string, max int) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
@@ -344,6 +373,7 @@ func enforceLogRetention(dir, base string, max int) {
 	})
 
 	for i := 0; i < len(logs)-max; i++ {
+		logger.Infof(logModule, "removing old log %s", logs[i].name)
 		_ = os.Remove(path.Join(dir, logs[i].name))
 	}
 }

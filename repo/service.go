@@ -2,13 +2,14 @@ package repo
 
 import (
 	"errors"
-	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/zellydev-games/opensplit/config"
 	"github.com/zellydev-games/opensplit/dto"
 	"github.com/zellydev-games/opensplit/logger"
 	"github.com/zellydev-games/opensplit/repo/adapters"
+	"github.com/zellydev-games/opensplit/session"
 )
 
 const logModule = "repo"
@@ -36,6 +37,22 @@ type Service struct {
 
 func NewService(repository Repository) *Service {
 	return &Service{repository: repository}
+}
+
+func buildSplitFileName(sf dto.SplitFile) string {
+	var parts []string
+
+	parts = append(parts, sf.Platform)
+	parts = append(parts, sf.GameName)
+	parts = append(parts, sf.GameCategory)
+
+	for _, v := range sf.Variables {
+		if strings.TrimSpace(v.Label) != "" {
+			parts = append(parts, v.Label)
+		}
+	}
+
+	return strings.Join(parts, "-") + ".osf"
 }
 
 // LoadSplitFile reads splitfile bytes from a repo and returns it as a session.SplitFile
@@ -79,15 +96,40 @@ func (s *Service) SaveSplitFileWindowDimensions(X int, Y int, Width int, Height 
 }
 
 func (s *Service) SaveSplitFile(splitFile dto.SplitFile) error {
+	// Merge statistics from the currently loaded split file when
+	// saving a newer split file version.
+	s.splitFileLock.RLock()
+	existingBytes, err := s.repository.GetLoadedSplitFile()
+	s.splitFileLock.RUnlock()
+
+	if err == nil {
+		existingDTO, err := adapters.JSONSplitFileToDTO(string(existingBytes))
+		if err == nil {
+			existingDomain, err := adapters.DTOSplitFileToDomain(existingDTO)
+			if err == nil {
+				newDomain, err := adapters.DTOSplitFileToDomain(splitFile)
+				if err == nil {
+					if newDomain.Version > existingDomain.Version {
+						session.UpgradeSplitFile(&existingDomain, &newDomain)
+						logger.Infof(
+							logModule,
+							"upgrading split file v%d -> v%d",
+							existingDomain.Version,
+							newDomain.Version,
+						)
+						newDomain.RebuildStatistics()
+						splitFile = adapters.DomainSplitFileToDTO(newDomain)
+					}
+				}
+			}
+		}
+	}
+
 	payload, err := adapters.SplitFileToFrontEnd(splitFile)
 	if err != nil {
 		return err
 	}
-	identifier := splitFile.GameName
-	if splitFile.GameCategory != "" {
-		identifier += "-" + splitFile.GameCategory
-	}
-	identifier += ".osf"
+	identifier := buildSplitFileName(splitFile)
 
 	// minimum sizes and position
 	splitFile.WindowX = max(10, splitFile.WindowX)
@@ -109,27 +151,39 @@ func (s *Service) SaveSplitFile(splitFile dto.SplitFile) error {
 }
 
 func (s *Service) Export() error {
+	logger.Info(logModule,
+		"exporting cleaned split file",
+	)
 	sfBytes, err := s.repository.GetLoadedSplitFile()
 	if err != nil {
+		logger.Errorf(logModule, "Failed to get loaded split file: %v", err)
 		return err
 	}
 
 	sf, err := adapters.JSONSplitFileToDTO(string(sfBytes))
 	if err != nil {
+		logger.Errorf(logModule, "Failed to convert split file to domain object: %v", err)
 		return err
 	}
 
 	cleanDTO, err := adapters.CleanSplitFile(sf)
 	if err != nil {
+		logger.Errorf(logModule, "Failed to clean user data from split file: %v", err)
 		return err
 	}
 
 	cleanBytes, err := adapters.SplitFileToFrontEnd(cleanDTO)
 	if err != nil {
+		logger.Errorf(logModule, "Failed to convert clean split file to json: %v", err)
 		return err
 	}
 
-	defaultFileName := fmt.Sprintf("%s-%s-%s.osf", sf.Platform, sf.GameName, sf.GameCategory)
+	defaultFileName := buildSplitFileName(sf)
+	logger.Infof(
+		logModule,
+		"export complete: %s",
+		defaultFileName,
+	)
 	return s.repository.Export(cleanBytes, defaultFileName)
 }
 
@@ -176,6 +230,10 @@ func (s *Service) LoadConfig(c *config.Service) error {
 		return err
 	}
 
+	logger.Debug(
+		logModule,
+		"ensuring default key bindings",
+	)
 	newConfig.EnsureDefaultKeyBindings()
 
 	s.configLock.Lock()

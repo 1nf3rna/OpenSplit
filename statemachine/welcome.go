@@ -35,6 +35,8 @@ func (w *Welcome) OnEnter() error {
 	return nil
 }
 func (w *Welcome) OnExit() error { return nil }
+
+// Receive handles welcome screen commands.
 func (w *Welcome) Receive(c command.Command, _ *string) (dispatcher.DispatchReply, error) {
 	switch c {
 	case command.LOAD:
@@ -45,11 +47,11 @@ func (w *Welcome) Receive(c command.Command, _ *string) (dispatcher.DispatchRepl
 		}
 		if sf.SelectedSkin != "" {
 			if err := machine.skinProvider.SetSkin(sf.SelectedSkin, false); err != nil {
-				logger.Errorf(logModule, "failed to set skin: %v", err)
+				logger.Debugf(logModule, "failed to set skin: %v", err)
 			}
 		} else {
 			if err := machine.skinProvider.SetSkin(machine.configService.SelectedSkin, false); err != nil {
-				logger.Errorf(logModule, "failed to set skin: %v", err)
+				logger.Debugf(logModule, "failed to set skin: %v", err)
 			}
 		}
 		domainSF, err := adapters.DTOSplitFileToDomain(sf)

@@ -16,3 +16,4 @@ frontend/package-lock.json
 tools/livesplitImageExtractor/Program.exe
 frontend/src/models/command.ts
 tools/livesplitImageExtractor/lssicons.csproj
+frontend/package.json.md5

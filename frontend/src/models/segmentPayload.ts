@@ -1,3 +1,10 @@
+/**
+ * One segment in the split hierarchy.
+ *
+ * Parent segments contain children.
+ * Leaf segments are individually timed.
+ */
+
 export default class SegmentPayload {
     id: string;
     name: string = "";

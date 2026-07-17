@@ -8,6 +8,8 @@ import (
 	"github.com/zellydev-games/opensplit/logger"
 )
 
+// InitListener creates the local HTTP server used to serve skin assets to the frontend.
+// The listener is initialized only once.
 func (s *Service) InitListener() (int, error) {
 	s.initOnce.Do(func() {
 		fs := http.FileServer(http.Dir(s.skinDir))
@@ -38,7 +40,9 @@ func (s *Service) InitListener() (int, error) {
 	return s.port, s.initErr
 }
 
+// Serve starts the skin HTTP server in a background goroutine.
 func (s *Service) Serve() {
+	logger.Info(logModule, "starting skin server")
 	s.serving.Store(true)
 	go func() {
 		err := s.server.Serve(s.listener)
@@ -47,13 +51,16 @@ func (s *Service) Serve() {
 		}
 
 		s.serving.Store(false)
+		logger.Info(logModule, "skin server stopped")
 	}()
 }
 
+// Serving reports whether the embedded HTTP server is currently running.
 func (s *Service) Serving() bool {
 	return s.serving.Load()
 }
 
+// Addr returns the base URL of the local skin server.
 func (s *Service) Addr() string {
 	return s.address
 }

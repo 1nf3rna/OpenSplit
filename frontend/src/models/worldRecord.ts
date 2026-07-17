@@ -1,3 +1,8 @@
+/**
+ * Cached world record information retrieved from
+ * Speedrun.com.
+ */
+
 export default class WorldRecord {
     show = false;
 

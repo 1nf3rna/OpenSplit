@@ -5,6 +5,7 @@ package command
 // Command bytes are sent to the Service.Dispatch method receiver to indicate the state machine should take some action.
 type Command byte
 
+// Supported application commands.
 const (
 	QUIT Command = iota
 	NEW

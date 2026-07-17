@@ -5,48 +5,82 @@ import { GetAvailableSkins, SetSkin } from "../../wailsjs/go/skin/Service";
 import { EventsOn, WindowSetSize } from "../../wailsjs/runtime";
 import { Command } from "../models/command";
 import { ConfigPayload, KeyInfo } from "../models/configPayload";
+import { log } from "../utils/logger";
 
 export type ConfigParams = {
     configPayload: ConfigPayload;
 };
 
 const RECORDING_ARMED = 10;
+const DEFAULT_ROLLING_AVG = 20;
 
 export default function Config({ configPayload }: ConfigParams) {
     const [recording, setRecording] = useState(false);
     const [config, setConfig] = useState<ConfigPayload>(configPayload);
     const [availableSkins, setAvailableSkins] = useState<Array<string>>([]);
-    const [selectedSkin, setSelectedSkin] = useState<string>(configPayload.selected_skin);
+    const [rollingAvg, setRollingAvg] = useState<number>(configPayload.rolling_average_runs ?? DEFAULT_ROLLING_AVG);
 
     useEffect(() => {
-        (async () => {
-            await SetSkin(selectedSkin, true);
-        })();
-    }, [selectedSkin]);
+        WindowSetSize(700, 900);
 
-    useEffect(() => {
-        (async () => {
-            const as = await GetAvailableSkins();
-            console.log(as);
-            setAvailableSkins(as);
-        })();
+        const loadSkins = async () => {
+            const skins = await GetAvailableSkins();
+            log.debug("Loaded skins", skins);
+            setAvailableSkins(skins);
+        };
+
+        void loadSkins();
     }, []);
 
     useEffect(() => {
-        WindowSetSize(700, 800);
-        return EventsOn("config:update", (newConfigPayload: ConfigPayload) => {
-            console.log("received update from backend", newConfigPayload);
-            setConfig(newConfigPayload);
+        const offHotkey = EventsOn("config:hotkey-recorded", (evt: { command: Command; key_info: KeyInfo }) => {
             setRecording(false);
+
+            setConfig((prev) => ({
+                ...prev,
+                key_config: {
+                    ...(prev.key_config ?? {}),
+                    [evt.command]: evt.key_info,
+                },
+            }));
         });
+
+        return () => {
+            offHotkey();
+        };
     }, []);
 
+    useEffect(() => {
+        setRollingAvg(config.rolling_average_runs ?? DEFAULT_ROLLING_AVG);
+    }, [config]);
+
+    useEffect(() => {
+        void SetSkin(config.selected_skin, true);
+    }, [config.selected_skin]);
+
+    const hasHotkey = (ki?: KeyInfo) => {
+        return !!ki && !!ki.locale_name;
+    };
+
+    // backend records the next keypress
     const armHotkey = async (command: Command) => {
         const reply = await Dispatch(command, null);
         if (reply.code == RECORDING_ARMED) {
-            console.log("backend confirms recording is armed");
+            log.debug("Hotkey recording armed");
             setRecording(true);
         }
+    };
+
+    const clearHotkey = (command: Command) => {
+        setConfig((prev) => {
+            const keyConfig = { ...(prev.key_config ?? {}) };
+            delete keyConfig[command];
+
+            return {
+                ...prev,
+                key_config: keyConfig,
+            };
+        });
     };
 
     const getHotkeyName = (ki?: KeyInfo): string => {
@@ -63,6 +97,7 @@ export default function Config({ configPayload }: ConfigParams) {
         return ret.trim() === "" ? "No Hotkey Assigned" : ret;
     };
 
+    // generated dynamically
     const displayHotkeyRows = () => {
         const commands: [Command, string][] = [
             [Command.SPLIT, "Split"],
@@ -74,13 +109,21 @@ export default function Config({ configPayload }: ConfigParams) {
             [Command.COMPARISON_RIGHT, "Next Comparison"],
         ];
 
-        return commands.map((command: [Command, string]) => (
-            <div className="row" key={command[0]}>
+        return commands.map(([command, label]) => (
+            <div className="row" key={command}>
                 <div className="hotkeyContainer">
-                    <p className="hotkeyID">{command[1]}: </p>
-                    <p className="hotkeyValue">{getHotkeyName(config.key_config?.[command[0]])}</p>
-                    <button disabled={recording} onClick={() => armHotkey(command[0])}>
-                        {(recording && "Recording") || "Record Hotkey"}
+                    <p className="hotkeyID">{label}:</p>
+                    <p className="hotkeyValue">{getHotkeyName(config.key_config?.[command])}</p>
+
+                    <button disabled={recording} onClick={() => armHotkey(command)}>
+                        {recording ? "Recording" : "Record Hotkey"}
+                    </button>
+
+                    <button
+                        disabled={recording || !hasHotkey(config.key_config?.[command])}
+                        onClick={() => clearHotkey(command)}
+                    >
+                        Clear
                     </button>
                 </div>
             </div>
@@ -97,17 +140,48 @@ export default function Config({ configPayload }: ConfigParams) {
 
             <hr />
 
-            <div id="skins" style={{ marginBottom: 20 }}>
+            <div className="config-section config-skins">
                 <h3>Active Skin</h3>
                 <select
-                    style={{ marginLeft: 20, width: "50%" }}
+                    className="config-skin-select"
                     id="selectedSkin"
-                    value={selectedSkin}
-                    onChange={(e) => setSelectedSkin(e.target.value)}
+                    value={config.selected_skin}
+                    onChange={(e) =>
+                        setConfig((prev) => ({
+                            ...prev,
+                            selected_skin: e.target.value,
+                        }))
+                    }
                 >
                     {availableSkins.map((s) => (
                         <option value={s} key={s}>
                             {s}
+                        </option>
+                    ))}
+                </select>
+            </div>
+
+            <hr />
+
+            <div id="rollingAvg">
+                <h3>Rolling Average Window</h3>
+
+                <select
+                    value={rollingAvg}
+                    onChange={(e) => {
+                        const v = parseInt(e.target.value);
+
+                        setRollingAvg(v);
+
+                        setConfig((prev) => ({
+                            ...prev,
+                            rolling_average_runs: v,
+                        }));
+                    }}
+                >
+                    {[5, 10, 20, 50, 100].map((n) => (
+                        <option key={n} value={n}>
+                            Last {n} Runs
                         </option>
                     ))}
                 </select>

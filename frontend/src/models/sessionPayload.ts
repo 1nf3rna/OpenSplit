@@ -1,3 +1,10 @@
+/**
+ * Represents the current runtime state of OpenSplit.
+ *
+ * This object changes as the runner progresses through
+ * a split file.
+ */
+
 import RunPayload from "./runPayload";
 import SegmentPayload from "./segmentPayload";
 import SplitFilePayload from "./splitFilePayload";

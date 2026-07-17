@@ -24,6 +24,7 @@ type Socket struct {
 }
 
 func NewSocket(d *dispatcher.Service, port uint16) *Socket {
+	logger.Debugf(logModule, "creating autosplitter socket on UDP port %d", port)
 	return &Socket{
 		dispatcher: d,
 		port:       port,
@@ -32,6 +33,7 @@ func NewSocket(d *dispatcher.Service, port uint16) *Socket {
 }
 
 func (s *Socket) Close() error {
+	logger.Debug(logModule, "closing autosplitter socket")
 	var err error
 	s.closeOnce.Do(func() {
 		close(s.closed)
@@ -54,12 +56,14 @@ func (s *Socket) Listen() {
 		logger.Errorf(logModule, "ListenPacket err: %v", err)
 		return
 	}
+	logger.Infof(logModule, "listening on UDP port %d", s.port)
 
 	s.mu.Lock()
 	s.conn = conn
 	s.mu.Unlock()
 
 	defer func() {
+		logger.Infof(logModule, "listening on UDP port %d", s.port)
 		_ = s.Close()
 	}()
 
@@ -98,6 +102,13 @@ func (s *Socket) Listen() {
 		ackRequested := int(packet[5]) == 1
 		c := command.Command(packet[6])
 
+		logger.Debugf(
+			logModule,
+			"received command %v ack=%v",
+			c,
+			ackRequested,
+		)
+
 		if version != 1 {
 			logger.Errorf(logModule, "invalid version: %d", version)
 			if ackRequested {
@@ -108,6 +119,12 @@ func (s *Socket) Listen() {
 
 		_, err = s.dispatcher.Dispatch(c, nil)
 		if err != nil {
+			logger.Errorf(
+				logModule,
+				"dispatch failed for %v: %v",
+				c,
+				err,
+			)
 			if ackRequested {
 				sendAck(conn, addr, 2)
 			}
@@ -121,6 +138,11 @@ func (s *Socket) Listen() {
 }
 
 func sendAck(conn net.PacketConn, addr net.Addr, status byte) {
+	logger.Debugf(
+		logModule,
+		"sending ack status=%d",
+		status,
+	)
 	buf := make([]byte, 0, 7)
 	buf = append(buf, 'O', 'S', 'R', 'C')
 	buf = append(buf, 1)    // version
