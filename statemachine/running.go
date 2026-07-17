@@ -21,6 +21,21 @@ func NewRunningState() (*Running, error) {
 	return &Running{}, nil
 }
 
+func isHotkeyCommand(c command.Command) bool {
+	switch c {
+	case command.SPLIT,
+		command.UNDO,
+		command.SKIP,
+		command.PAUSE,
+		command.RESET,
+		command.COMPARISON_LEFT,
+		command.COMPARISON_RIGHT:
+		return true
+	default:
+		return false
+	}
+}
+
 func (r *Running) OnEnter() error {
 	machine.saveOnWindowDimensionChanges = true
 	sessionDto := adapters.DomainToDTO(machine.sessionService)
@@ -31,6 +46,11 @@ func (r *Running) OnEnter() error {
 			}
 
 			for c, keyData := range machine.configService.KeyConfig {
+				// Ignore stale/invalid commands stored in old configs
+				if !isHotkeyCommand(c) {
+					continue
+				}
+
 				if keyData.KeyCode != data.KeyCode {
 					continue
 				}
@@ -58,12 +78,9 @@ func (r *Running) OnEnter() error {
 					if !match {
 						continue
 					}
-					_, _ = machine.ReceiveDispatch(c, nil)
-					return
-				} else {
-					_, _ = machine.ReceiveDispatch(c, nil)
-					return
 				}
+				_, _ = machine.ReceiveDispatch(c, nil)
+				return
 			}
 		})
 
@@ -130,12 +147,16 @@ func (r *Running) Receive(c command.Command, payload *string) (dispatcher.Dispat
 			machine.runtimeProvider.EventsEmit("opensplit:done")
 		}
 	case command.UNDO:
+		logger.Debug(logModule, "Running received UNDO")
 		machine.sessionService.Undo()
 	case command.SKIP:
+		logger.Debug(logModule, "Running received SKIP")
 		machine.sessionService.Skip()
 	case command.PAUSE:
+		logger.Debug(logModule, "Running received PAUSE")
 		machine.sessionService.Pause()
 	case command.RESET:
+		logger.Debug(logModule, "Running received RESET")
 		_ = machine.promptPartialRun()
 		// note: promptPartialRun only adds the partial run to the session's loadedSplitFile's Runs slice.
 		// Nothing has been saved to disk at this point, so keep the file dirty if needs be.
@@ -171,18 +192,22 @@ func (r *Running) Receive(c command.Command, payload *string) (dispatcher.Dispat
 				Message: "invalid offset payload",
 			}, nil
 		}
+		logger.Infof(logModule,
+			"runtime offset set to %dms",
+			ms)
 
 		machine.sessionService.SetRuntimeOffsetOverride(
 			time.Duration(ms) * time.Millisecond,
 		)
 	case command.CLEAR_RUNTIME_OFFSET:
+		logger.Info(logModule, "runtime offset cleared")
 		machine.sessionService.ClearRuntimeOffsetOverride()
 	case command.COMPARISON_LEFT:
 		machine.runtimeProvider.EventsEmit("comparison:left")
 	case command.COMPARISON_RIGHT:
 		machine.runtimeProvider.EventsEmit("comparison:right")
-
 	case command.TOGGLEWR:
+		logger.Debug(logModule, "world record display toggled")
 		machine.sessionService.ToggleWorldRecordDisplay()
 
 		machine.runtimeProvider.EventsEmit(

@@ -6,12 +6,14 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/zellydev-games/opensplit/config"
 	"github.com/zellydev-games/opensplit/logger"
 )
 
 const logModule = "session"
 const splitDebounce = 120 * time.Millisecond
 
+// SplitResult describes the outcome of a Split operation.
 type SplitResult int
 
 const (
@@ -22,6 +24,7 @@ const (
 	SplitReset
 )
 
+// State represents the lifecycle state of a timing session.
 type State byte
 
 const (
@@ -90,6 +93,7 @@ type Service struct {
 	lastSplitTime         time.Time
 	dirty                 bool
 	runtimeOffsetOverride *time.Duration
+	configService         *config.Service
 	sessionUpdateChannel  chan *Service
 }
 
@@ -98,11 +102,12 @@ type Service struct {
 // Generally in real code splitFile should be nil and will be populated by the
 // statemachine.Service via UpdateSplitFile or LoadSplitFile
 // Timer updates will be sent over the timeUpdatedChannel at approximately 60FPS.
-func NewService(timer Timer) (*Service, chan *Service) {
+func NewService(timer Timer, cfg *config.Service) (*Service, chan *Service) {
 	service := &Service{
 		timer:                timer,
 		currentSegmentIndex:  -1,
 		sessionUpdateChannel: make(chan *Service, 128),
+		configService:        cfg,
 	}
 
 	return service, service.sessionUpdateChannel
@@ -121,6 +126,23 @@ func (s *Service) UpdateWindowDimensions(x, y, w, h int) {
 	logger.Debugf(logModule, "session received new window dimensions: x:%d y:%d w:%d h:%d", x, y, w, h)
 }
 
+func (s *Service) refreshLeafSegments() {
+	if s.loadedSplitFile == nil {
+		return
+	}
+
+	s.leafSegments = getLeafSegments(s.loadedSplitFile.Segments, nil)
+}
+
+func (sf *SplitFile) InitializeStatistics(window int) {
+	if window <= 0 {
+		window = 20
+	}
+
+	sf.RollingAverageRuns = window
+	sf.RebuildStatistics()
+}
+
 func (s *Service) SetLoadedSplitFile(sf SplitFile) {
 	logger.Debugf(logModule, "setting loaded splitfile to %s", sf.GameName)
 
@@ -128,24 +150,40 @@ func (s *Service) SetLoadedSplitFile(sf SplitFile) {
 	defer s.mu.Unlock()
 	defer s.sendUpdate()
 
-	s.loadedSplitFile = &sf
-	s.timer.Reset(&sf.Offset)
+	// session owns its own copy
+	copy := DeepCopySplitFile(&sf)
+	s.loadedSplitFile = &copy
+	s.refreshLeafSegments()
 
 	logger.Infof(
 		logModule,
-		"loaded splitfile offset=%d",
-		sf.Offset.Milliseconds(),
+		"%s loaded in session (segments=%d leaf=%d)",
+		sf.GameName,
+		len(s.loadedSplitFile.Segments),
+		len(s.leafSegments),
 	)
 
-	s.leafSegments = getLeafSegments(sf.Segments, nil)
+	// apply config-driven rolling window
+	window := 20
+	if s.configService != nil && s.configService.RollingAverageRuns > 0 {
+		window = s.configService.RollingAverageRuns
+	}
 
+	s.loadedSplitFile.InitializeStatistics(window)
+
+	s.resetLocked()
 	s.currentRun = nil
 	s.currentSegmentIndex = -1
 	s.sessionState = Idle
 	s.dirty = false
-	s.loadedSplitFile.BuildStats()
-	logger.Infof(logModule, "%s loaded in session (segments total/leaf %d/%d)",
-		sf.GameName, len(sf.Segments), len(s.leafSegments))
+
+	logger.Infof(
+		logModule,
+		"%s loaded in session (segments total/leaf %d/%d)",
+		sf.GameName,
+		len(sf.Segments),
+		len(s.leafSegments),
+	)
 }
 
 func (s *Service) ToggleWorldRecordDisplay() {
@@ -153,6 +191,11 @@ func (s *Service) ToggleWorldRecordDisplay() {
 		return
 	}
 
+	logger.Debugf(
+		logModule,
+		"world record display=%v",
+		s.loadedSplitFile.WR.Show,
+	)
 	s.loadedSplitFile.WR.Show = !s.loadedSplitFile.WR.Show
 }
 
@@ -169,6 +212,8 @@ func (s *Service) SetRuntimeOffsetOverride(offset time.Duration) {
 		"runtime offset override set to %dms",
 		offset.Milliseconds(),
 	)
+
+	s.resetLocked()
 }
 
 // ClearRuntimeOffsetOverride removes the runtime-only offset override.
@@ -177,6 +222,8 @@ func (s *Service) ClearRuntimeOffsetOverride() {
 	defer s.mu.Unlock()
 
 	s.runtimeOffsetOverride = nil
+
+	s.resetLocked()
 
 	logger.Info(logModule, "runtime offset override cleared")
 }
@@ -209,7 +256,6 @@ func (s *Service) Split() SplitResult {
 	case Running:
 		return s.advanceRun()
 	case Finished:
-		s.loadedSplitFile.BuildStats()
 		s.resetLocked()
 		return SplitReset
 	case Paused:
@@ -228,6 +274,7 @@ func (s *Service) Undo() {
 		return
 	}
 
+	s.refreshLeafSegments()
 	oldSegmentName := "Finished"
 	if s.currentSegmentIndex < len(s.leafSegments) {
 		oldSegmentName = s.leafSegments[s.currentSegmentIndex].Name
@@ -272,6 +319,7 @@ func (s *Service) Undo() {
 		s.timer.Start()
 		logger.Info(logModule, "finished status cleared")
 	}
+	s.loadedSplitFile.RebuildStatistics()
 }
 
 // Finish force-completes the current run regardless of remaining splits.
@@ -325,6 +373,7 @@ func (s *Service) UnDone() SplitResult {
 			s.loadedSplitFile.Runs = s.loadedSplitFile.Runs[:len(s.loadedSplitFile.Runs)-1]
 		}
 	}
+	s.loadedSplitFile.RebuildStatistics()
 
 	s.sessionState = Running
 	s.timer.Start()
@@ -377,6 +426,7 @@ func (s *Service) Pause() {
 func (s *Service) Reset() {
 	logger.Info(logModule, "reset requested")
 	s.mu.Lock()
+	s.refreshLeafSegments()
 	s.resetLocked()
 	s.mu.Unlock()
 	s.sendUpdate()
@@ -387,6 +437,7 @@ func (s *Service) CloseRun() {
 	s.mu.Lock()
 	s.currentRun = nil
 	s.runtimeOffsetOverride = nil
+	logger.Debug(logModule, "runtime offset override cleared")
 	s.mu.Unlock()
 	logger.Info(logModule, "run closed, resetting session")
 	s.resetLocked()
@@ -448,6 +499,9 @@ func (s *Service) resetLocked() {
 	s.currentRun = nil
 	s.sessionState = Idle
 	s.currentSegmentIndex = -1
+	if s.loadedSplitFile != nil {
+		s.loadedSplitFile.RebuildStatistics()
+	}
 	logger.Info(logModule, "session reset")
 }
 
@@ -457,10 +511,19 @@ func (s *Service) PersistRunToSession() {
 		return
 	}
 
-	s.loadedSplitFile.Runs = append(s.loadedSplitFile.Runs, *s.currentRun)
-	s.loadedSplitFile.BuildStats()
+	window := 20
+	if s.configService != nil {
+		window = s.configService.RollingAverageRuns
+	}
 
-	logger.Info(logModule, "run persisted to session, new stats built")
+	s.loadedSplitFile.AddRun(s.currentRun, window)
+
+	logger.Infof(
+		logModule,
+		"run persisted total=%d attempts=%d",
+		s.currentRun.TotalTime.Milliseconds(),
+		s.loadedSplitFile.Attempts,
+	)
 }
 
 func (s *Service) debounced() bool {
@@ -481,12 +544,9 @@ func (s *Service) startNewRun() SplitResult {
 	}
 
 	if len(s.leafSegments) == 0 {
-		logger.Debug(logModule, "Split() called on run with no DeepCopyLeafSegments, NO-OP")
-		return SplitNoop
+		logger.Warn(logModule, "loaded split file contains no leaf segments")
 	}
 
-	// s.timer.SubtractTime(s.effectiveOffset())
-	// s.timer.SubtractTime(s.loadedSplitFile.Offset)
 	s.timer.Start()
 	s.loadedSplitFile.Attempts++
 	s.sessionState = Running
@@ -561,5 +621,6 @@ func (s *Service) sendUpdate() {
 	select {
 	case s.sessionUpdateChannel <- s:
 	default:
+		logger.Debug(logModule, "session update skipped")
 	}
 }

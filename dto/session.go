@@ -1,7 +1,9 @@
 package dto
 
+// SessionState represents the current state of a timer session.
 type SessionState byte
 
+// Session is the frontend representation of the current timer session.
 type Session struct {
 	LoadedSplitFile     *SplitFile   `json:"loaded_split_file"`
 	LeafSegments        []Segment    `json:"leaf_segments"`
@@ -11,6 +13,7 @@ type Session struct {
 	Dirty               bool         `json:"dirty"`
 }
 
+// Run represents a completed or active attempt.
 type Run struct {
 	ID               string           `json:"id"`
 	SplitFileVersion int              `json:"split_file_version"`

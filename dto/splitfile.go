@@ -1,5 +1,6 @@
 package dto
 
+// Segment represents the data of a single split segment.
 type Segment struct {
 	ID       string    `json:"id"`
 	Name     string    `json:"name"`
@@ -10,20 +11,30 @@ type Segment struct {
 	Children []Segment `json:"children"`
 }
 
+// Split represents the cumulative data of a segment.
 type Split struct {
 	SplitSegmentID    string `json:"split_segment_id"`
 	CurrentCumulative int64  `json:"current_cumulative"`
 	CurrentDuration   int64  `json:"current_duration"`
 }
 
+type Variable struct {
+	ID      string `json:"id"`
+	Name    string `json:"name"`
+	ValueID string `json:"value"`
+	Label   string `json:"label"`
+}
+
 // SplitFile represents the data and history of a game/category combo.
 type SplitFile struct {
-	ID           string `json:"id"`
-	GameName     string `json:"game_name"`
-	GameID       string `json:"speedrun_game_id"`
-	GameCategory string `json:"game_category"`
-	CategoryID   string `json:"speedrun_game_category_id"`
-	Version      int    `json:"version"`
+	ID           string     `json:"id"`
+	GameName     string     `json:"game_name"`
+	GameID       string     `json:"speedrun_game_id"`
+	GameCategory string     `json:"game_category"`
+	CategoryID   string     `json:"speedrun_game_category_id"`
+	Variables    []Variable `json:"variables"`
+
+	Version int `json:"version"`
 
 	SelectedSkin string `json:"selected_skin"`
 
@@ -44,6 +55,7 @@ type SplitFile struct {
 	WindowHeight int `json:"window_height"`
 }
 
+// WorldRecord represents the data of the current world record.
 type WorldRecord struct {
 	Show       bool     `json:"show"`
 	RunID      string   `json:"run_id"`

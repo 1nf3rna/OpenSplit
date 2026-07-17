@@ -4,6 +4,7 @@ import (
 	"github.com/zellydev-games/opensplit/logger"
 )
 
+// Skin forwards skin updates to the frontend.
 type Skin struct {
 	runtimeProvider RuntimeProvider
 	skinUpdatedCh   <-chan string
@@ -21,6 +22,7 @@ func (c *Skin) StartUIPump() {
 		for {
 			updatedSkinAddress, ok := <-c.skinUpdatedCh
 			if !ok {
+				logger.Debug(logModule, "skin UI pump stopped")
 				return
 			}
 			c.runtimeProvider.EventsEmit("skin:update", updatedSkinAddress)

@@ -1,5 +1,8 @@
 package skin
 
+// Package skin manages installed UI skins, serves skin assets over a local HTTP
+// server, and watches the selected skin for live reloads.
+
 import (
 	"archive/zip"
 	"bytes"
@@ -40,7 +43,8 @@ type DirectoryWatcher interface {
 	ChangeRoot(string)
 }
 
-// Service allows for platform switching of skins
+// Service manages installed skins, the embedded HTTP server, filesystem watching,
+// and persistence of the selected skin.
 type Service struct {
 	m             sync.RWMutex
 	initOnce      sync.Once
@@ -72,7 +76,8 @@ func NewService(skinDir string,
 	}, ch
 }
 
-// Startup takes a context.Context passed by Wails.run OnStartup and sets it to this Service.
+// Startup extracts the embedded default skin, restores the previously selected skin,
+// and begins watching the active skin directory for changes.
 func (s *Service) Startup() error {
 	if s.skinDir == "" {
 		return errors.New("skinDir not set")
@@ -105,8 +110,10 @@ func (s *Service) Startup() error {
 		return err
 	}
 
+	logger.Info(logModule, "extracting default skin")
 	for _, f := range r.File {
 		p := filepath.Join(target, "default", f.Name)
+		logger.Infof(logModule, "default skin extracted to %s", p)
 
 		// Prevent ZipSlip
 		if !strings.HasPrefix(filepath.Clean(p)+string(os.PathSeparator), filepath.Clean(target)+string(os.PathSeparator)) {
@@ -173,6 +180,7 @@ func (s *Service) Startup() error {
 
 	s.m.RLock()
 	watchDir := filepath.Join(s.skinDir, s.selectedSkin)
+	logger.Infof(logModule, "watching skin directory %s", watchDir)
 	s.m.RUnlock()
 
 	s.watcher.Start(watchDir, s.skinUpdated)
@@ -205,12 +213,16 @@ func (s *Service) GetAvailableSkins() []string {
 	return availableSkins
 }
 
+// SetSkin switches the active skin.
+//
+// When writeConfig is true, the selected skin is persisted to the configuration file.
 func (s *Service) SetSkin(name string, writeConfig bool) error {
 	for _, skin := range s.GetAvailableSkins() {
 		if name == skin {
 			s.m.Lock()
 			s.selectedSkin = name
 			s.m.Unlock()
+			logger.Infof(logModule, "skin changed to %s", name)
 
 			s.watcher.ChangeRoot(filepath.Join(s.skinDir, s.selectedSkin))
 
@@ -230,12 +242,14 @@ func (s *Service) SetSkin(name string, writeConfig bool) error {
 	return errors.New("skin not found")
 }
 
+// SelectedSkin returns the currently active skin.
 func (s *Service) SelectedSkin() string {
 	s.m.RLock()
 	defer s.m.RUnlock()
 	return s.selectedSkin
 }
 
+// GetSkinAddress returns the URL to the active skin's stylesheet.
 func (s *Service) GetSkinAddress() string {
 	s.m.RLock()
 	defer s.m.RUnlock()
@@ -246,5 +260,6 @@ func (s *Service) GetSkinAddress() string {
 }
 
 func (s *Service) skinUpdated() {
+	logger.Debug(logModule, "skin changed on disk, notifying frontend")
 	s.skinUpdatedCh <- s.GetSkinAddress() + "?v=" + strconv.FormatInt(time.Now().UnixNano(), 10)
 }

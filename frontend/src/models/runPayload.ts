@@ -1,3 +1,7 @@
+/**
+ * One completed or in-progress run.
+ */
+
 import SegmentPayload from "./segmentPayload";
 import SplitPayload from "./splitPayload";
 

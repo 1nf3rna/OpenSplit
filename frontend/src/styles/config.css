@@ -1,4 +1,13 @@
 @layer components {
+    .config-skins {
+        margin-bottom: 20px;
+    }
+
+    .config-skin-select {
+        width: 50%;
+        margin-left: 20px;
+    }
+
     .options {
         flex-grow: 1;
     }

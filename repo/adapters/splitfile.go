@@ -16,7 +16,7 @@ func DomainSplitFileToDTO(sf session.SplitFile) dto.SplitFile {
 	// add personal best if exists
 	var PB *dto.Run = nil
 	if sf.PB != nil {
-		dtoPB := domainRunToDTO(*sf.PB, sf.ID, sf.Version)
+		dtoPB := domainRunToDTO(*sf.PB, sf.Version)
 		PB = &dtoPB
 	}
 
@@ -26,7 +26,9 @@ func DomainSplitFileToDTO(sf session.SplitFile) dto.SplitFile {
 		GameID:       sf.GameID,
 		GameCategory: sf.GameCategory,
 		CategoryID:   sf.CategoryID,
-		Version:      sf.Version,
+		Variables:    domainVariablesToDTO(sf.Variables),
+
+		Version: sf.Version,
 
 		SelectedSkin: sf.SelectedSkin,
 
@@ -65,7 +67,7 @@ func DTOSplitFileToDomain(payload dto.SplitFile) (session.SplitFile, error) {
 	if payload.PB != nil {
 		domainPB, err := dtoRunToDomain(*payload.PB)
 		if err != nil {
-			logger.Error(logModule, "failed to get PB for split file")
+			logger.Errorf(logModule, "failed to get PB for split file: %v", err)
 			PB = nil
 		} else {
 			PB = &domainPB
@@ -76,6 +78,10 @@ func DTOSplitFileToDomain(payload dto.SplitFile) (session.SplitFile, error) {
 	fixedRuns := []dto.Run{}
 	for _, run := range payload.Runs {
 		if run.ID == uuid.Nil.String() {
+			logger.Warn(
+				logModule,
+				"discarding run with invalid UUID",
+			)
 			continue
 		}
 
@@ -87,6 +93,8 @@ func DTOSplitFileToDomain(payload dto.SplitFile) (session.SplitFile, error) {
 	newSplitFile.GameID = payload.GameID
 	newSplitFile.GameCategory = payload.GameCategory
 	newSplitFile.CategoryID = payload.CategoryID
+	newSplitFile.Variables = dtoVariablesToDomain(payload.Variables)
+
 	newSplitFile.Version = payload.Version
 
 	newSplitFile.SelectedSkin = payload.SelectedSkin
@@ -107,7 +115,7 @@ func DTOSplitFileToDomain(payload dto.SplitFile) (session.SplitFile, error) {
 	newSplitFile.WindowHeight = payload.WindowHeight
 	newSplitFile.WindowWidth = payload.WindowWidth
 
-	logger.Infof(logModule,
+	logger.Debugf(logModule,
 		"DOMAIN GameID=%q CategoryID=%q",
 		newSplitFile.GameID,
 		newSplitFile.CategoryID,
@@ -122,7 +130,7 @@ func DTOSplitFileToDomain(payload dto.SplitFile) (session.SplitFile, error) {
 func JSONSplitFileToDTO(payload string) (dto.SplitFile, error) {
 	var sf dto.SplitFile
 	err := json.Unmarshal([]byte(payload), &sf)
-	logger.Infof(logModule,
+	logger.Debugf(logModule,
 		"DTO GameID=%q CategoryID=%q",
 		sf.GameID,
 		sf.CategoryID,
@@ -147,6 +155,10 @@ func checkSegmentIDs(segments []dto.Segment) {
 		if seg.ID == "" {
 			seg.ID = uuid.New().String()
 			segments[i] = seg
+			logger.Debug(
+				logModule,
+				"generated segment UUID",
+			)
 		}
 
 		if len(seg.Children) > 0 {
@@ -210,12 +222,12 @@ func dtoSegmentToDomain(dtoSeg dto.Segment) session.Segment {
 func domainRunsToDTO(runs []session.Run, splitFileID uuid.UUID, splitFileVersion int) []dto.Run {
 	out := make([]dto.Run, len(runs))
 	for i, r := range runs {
-		out[i] = domainRunToDTO(r, splitFileID, splitFileVersion)
+		out[i] = domainRunToDTO(r, splitFileVersion)
 	}
 	return out
 }
 
-func domainRunToDTO(run session.Run, splitFileID uuid.UUID, splitFileVersion int) dto.Run {
+func domainRunToDTO(run session.Run, splitFileVersion int) dto.Run {
 	return dto.Run{
 		ID:               run.ID.String(),
 		SplitFileVersion: splitFileVersion,
@@ -281,5 +293,35 @@ func dtoSplitsToDomain(splits map[string]dto.Split) map[uuid.UUID]session.Split 
 			CurrentDuration:   time.Duration(split.CurrentDuration) * time.Millisecond,
 		}
 	}
+	return out
+}
+
+func domainVariablesToDTO(vars []session.Variable) []dto.Variable {
+	out := make([]dto.Variable, len(vars))
+
+	for i, v := range vars {
+		out[i] = dto.Variable{
+			ID:      v.ID,
+			Name:    v.Name,
+			ValueID: v.ValueID,
+			Label:   v.Label,
+		}
+	}
+
+	return out
+}
+
+func dtoVariablesToDomain(vars []dto.Variable) []session.Variable {
+	out := make([]session.Variable, len(vars))
+
+	for i, v := range vars {
+		out[i] = session.Variable{
+			ID:      v.ID,
+			Name:    v.Name,
+			ValueID: v.ValueID,
+			Label:   v.Label,
+		}
+	}
+
 	return out
 }

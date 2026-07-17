@@ -8,6 +8,7 @@ type KeyData struct {
 	ModifierLocaleNames []string `json:"modifier_locale_names"`
 }
 
+// NewKeyData constructs a normalized KeyData value.
 func NewKeyData(kCode int, localeName string, modifiers []int, modifierLocalNames []string) KeyData {
 	if modifiers == nil {
 		modifiers = []int{}
