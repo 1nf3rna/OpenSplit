@@ -1,3 +1,10 @@
+/**
+ * Live race timer.
+ *
+ * Receives timer updates from the backend through Wails events
+ * and formats durations for display.
+ */
+
 import { useEffect, useState } from "react";
 
 import { EventsOn } from "../../../wailsjs/runtime";
@@ -125,6 +132,7 @@ export function partsToMS(parts: TimeParts): number {
     return negative ? abs * -1 : abs;
 }
 
+// produces formatting metadata
 export function formatDuration(timeParts: TimeParts, showSign: boolean = false): FormattedTimeParts {
     // What to show
     const showHours = timeParts.hours > 0;
@@ -164,6 +172,7 @@ export function formatDuration(timeParts: TimeParts, showSign: boolean = false):
     };
 }
 
+// returns ["1:23", ".45"] instead of one string.
 export function displayFormattedTimeParts(formattedParts: FormattedTimeParts): string[] {
     let timeString = "";
     if (formattedParts.showSign) {

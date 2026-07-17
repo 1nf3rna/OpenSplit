@@ -4,8 +4,10 @@ import (
 	"context"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
+	"github.com/zellydev-games/opensplit/logger"
 )
 
+// WailsRuntime wraps Wails runtime APIs behind an interface.
 type WailsRuntime struct {
 	ctx context.Context
 }
@@ -15,6 +17,7 @@ func NewWailsRuntime() *WailsRuntime {
 }
 
 func (w *WailsRuntime) Startup(ctx context.Context) {
+	logger.Debug(logModule, "runtime initialized")
 	w.ctx = ctx
 }
 

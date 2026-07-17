@@ -1,3 +1,10 @@
+/**
+ * TimeRow edits a duration using separate
+ * HH:MM:SS.cc fields.
+ *
+ * Values are converted to milliseconds whenever edited.
+ */
+
 import { forwardRef, useEffect, useImperativeHandle, useState } from "react";
 
 import { msToParts, partsToMS } from "../splitter/Timer";
@@ -34,6 +41,9 @@ export const TimeRow = forwardRef<Handle, TimeRowProps>((props, ref) => {
         setCentis(String(p.centis));
     }, [props.time]);
 
+    /**
+     * Emits the current field values as milliseconds.
+     */
     const emitChange = (h = hours, m = minutes, s = seconds, c = centis) => {
         props.onChange?.(
             partsToMS({
@@ -61,15 +71,18 @@ export const TimeRow = forwardRef<Handle, TimeRowProps>((props, ref) => {
     return (
         <div className="segment-time">
             <input
+                placeholder="H"
                 value={hours}
                 onChange={(e) => {
                     setHours(e.target.value);
                     emitChange(e.target.value, minutes, seconds, centis);
                 }}
             />
+
             <span>:</span>
 
             <input
+                placeholder="MM"
                 value={minutes}
                 onChange={(e) => {
                     setMinutes(e.target.value);
@@ -80,6 +93,7 @@ export const TimeRow = forwardRef<Handle, TimeRowProps>((props, ref) => {
             <span>:</span>
 
             <input
+                placeholder="SS"
                 value={seconds}
                 onChange={(e) => {
                     setSeconds(e.target.value);
@@ -90,6 +104,7 @@ export const TimeRow = forwardRef<Handle, TimeRowProps>((props, ref) => {
             <span>.</span>
 
             <input
+                placeholder="cc"
                 value={centis}
                 onChange={(e) => {
                     setCentis(e.target.value);

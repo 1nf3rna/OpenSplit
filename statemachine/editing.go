@@ -6,6 +6,7 @@ import (
 	"github.com/zellydev-games/opensplit/bridge"
 	"github.com/zellydev-games/opensplit/command"
 	"github.com/zellydev-games/opensplit/dispatcher"
+	"github.com/zellydev-games/opensplit/logger"
 	"github.com/zellydev-games/opensplit/repo/adapters"
 )
 
@@ -26,6 +27,7 @@ func (e *Editing) OnEnter() error {
 
 	splitFileDTO := adapters.DomainSplitFileToDTO(sf)
 	machine.sessionService.Pause()
+	sf.RebuildStatistics()
 	bridge.EmitUIEvent(machine.runtimeProvider, bridge.AppViewModel{
 		View:      bridge.AppViewEditSplitFile,
 		SplitFile: &splitFileDTO,
@@ -34,6 +36,8 @@ func (e *Editing) OnEnter() error {
 }
 
 func (e *Editing) OnExit() error { return nil }
+
+// Receive handles editor actions.
 func (e *Editing) Receive(c command.Command, payload *string) (dispatcher.DispatchReply, error) {
 	switch c {
 	case command.CANCEL:
@@ -45,10 +49,23 @@ func (e *Editing) Receive(c command.Command, payload *string) (dispatcher.Dispat
 				Message: "nil payload received",
 			}, nil
 		}
+		logger.Debugf(logModule, "payload %v", payload)
 		dto, err := adapters.JSONSplitFileToDTO(*payload)
 		if err != nil {
 			return dispatcher.DispatchReply{Code: 2, Message: err.Error()}, err
 		}
+		logger.Debugf(logModule, "dto: %v", dto)
+
+		domain, err := adapters.DTOSplitFileToDomain(dto)
+		if err != nil {
+			return dispatcher.DispatchReply{Code: 5, Message: err.Error()}, err
+		}
+		logger.Debugf(logModule, "domain: %v", domain)
+
+		domain.RebuildStatistics()
+		dto = adapters.DomainSplitFileToDTO(domain)
+		logger.Debugf(logModule, "dto: %v", dto)
+
 		err = machine.repoService.SaveSplitFile(dto)
 		if err != nil {
 			return dispatcher.DispatchReply{Code: 4, Message: "failed to save dto: " + err.Error()}, err
@@ -59,6 +76,8 @@ func (e *Editing) Receive(c command.Command, payload *string) (dispatcher.Dispat
 		if err != nil {
 			return dispatcher.DispatchReply{Code: 5, Message: err.Error()}, err
 		}
+		logger.Debugf(logModule, "split file: %v", sf)
+
 		machine.sessionService.SetLoadedSplitFile(sf)
 		go machine.updateWorldRecord()
 		machine.changeState(RUNNING)

@@ -1,3 +1,13 @@
+/**
+ * Primary race timer window.
+ *
+ * Hosts:
+ *  - Timer
+ *  - Segment list
+ *  - Context menu
+ *  - Comparison mode
+ */
+
 import React, { useEffect } from "react";
 
 import { Dispatch } from "../../../wailsjs/go/dispatcher/Service";
@@ -6,6 +16,7 @@ import { MenuItem, useContextMenu } from "../../hooks/useContextMenu";
 import { Command } from "../../models/command";
 import { ConfigPayload } from "../../models/configPayload";
 import SessionPayload from "../../models/sessionPayload";
+import { log } from "../../utils/logger";
 import { ContextMenu } from "../ContextMenu";
 import SegmentList from "./SegmentList";
 import Timer from "./Timer";
@@ -43,6 +54,7 @@ export default function Splitter({ sessionPayload, configPayload }: SplitterPara
                 const next = (index + dir + comparisons.length) % comparisons.length;
                 return comparisons[next];
             });
+            log.debug("Comparison mode changed", comparison);
         };
 
         const unsubLeft = EventsOn("comparison:left", () => rotate(-1));
@@ -73,6 +85,7 @@ export default function Splitter({ sessionPayload, configPayload }: SplitterPara
         })();
     }, [sessionPayload.loaded_split_file?.id]);
 
+    // regenerated whenever settings change
     const buildContextMenu = async (): Promise<MenuItem[]> => {
         const contextMenuItems: MenuItem[] = [];
         contextMenuItems.push({
@@ -114,6 +127,7 @@ export default function Splitter({ sessionPayload, configPayload }: SplitterPara
         contextMenuItems.push({
             label: (comparison == CompareAgainst.Average ? "✓ " : "") + "Compare Against Average",
             onClick: () => {
+                log.debug("Comparison mode changed", comparison);
                 setComparison(CompareAgainst.Average);
             },
         });
@@ -121,6 +135,7 @@ export default function Splitter({ sessionPayload, configPayload }: SplitterPara
         contextMenuItems.push({
             label: (comparison == CompareAgainst.Best ? "✓ " : "") + "Compare Against Best Run",
             onClick: () => {
+                log.debug("Comparison mode changed", comparison);
                 setComparison(CompareAgainst.Best);
             },
         });
@@ -128,6 +143,7 @@ export default function Splitter({ sessionPayload, configPayload }: SplitterPara
         contextMenuItems.push({
             label: (comparison == CompareAgainst.SumOfBest ? "✓ " : "") + "Compare Against Sum of Best Segments",
             onClick: () => {
+                log.debug("Comparison mode changed", comparison);
                 setComparison(CompareAgainst.SumOfBest);
             },
         });
@@ -153,9 +169,7 @@ export default function Splitter({ sessionPayload, configPayload }: SplitterPara
         <div {...contextMenu.bind} id="splitter">
             <ContextMenu state={contextMenu.state} close={contextMenu.close} items={contextMenuItems} />
             <SegmentList sessionPayload={sessionPayload} comparison={comparison} />
-
             <div className="comparison-mode">{comparisonLabel[comparison]}</div>
-
             <Timer offset={sessionPayload.loaded_split_file?.offset ?? 0} wr={sessionPayload.loaded_split_file?.wr} />
         </div>
     );

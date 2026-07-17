@@ -4,16 +4,19 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 	"time"
+
+	"github.com/zellydev-games/opensplit/logger"
 )
 
+// CategorySearchResult is the frontend-friendly representation of a category search.
 type CategorySearchResult struct {
 	Data []CategorySearchItem `json:"data"`
 }
 
+// CategorySearchItem describes a speedrun.com category.
 type CategorySearchItem struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
@@ -25,7 +28,10 @@ func (s *Service) SearchCategories(gameID string) (CategorySearchResult, error) 
 		s.baseURL,
 		url.QueryEscape(gameID),
 	)
-	log.Println(endpoint)
+	logger.Debugf(logModule,
+		"GET %s",
+		endpoint,
+	)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -44,7 +50,7 @@ func (s *Service) SearchCategories(gameID string) (CategorySearchResult, error) 
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
-			log.Printf("error closing response body: %v", err)
+			logger.Debugf(logModule, "error closing response body: %v", err)
 		}
 	}()
 
@@ -57,7 +63,11 @@ func (s *Service) SearchCategories(gameID string) (CategorySearchResult, error) 
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return CategorySearchResult{}, err
 	}
+	logger.Debugf(logModule,
+		"received %d categories: example %v",
+		len(result.Data),
+		result.Data[0],
+	)
 
-	log.Println(result)
 	return result, nil
 }

@@ -19,16 +19,24 @@ type Service struct {
 	SplitFileDir         string                              `json:"splitfile_dir"`
 	SkinsDir             string                              `json:"skins_dir"`
 	SelectedSkin         string                              `json:"selected_skin"`
+	RollingAverageRuns   int                                 `json:"rolling_average_runs"`
 	configUpdatedChannel chan<- *Service
 }
 
 func NewService(splitFileDir string, skinsDir string) (*Service, chan *Service) {
+	logger.Debugf(
+		logModule,
+		"config initialized splitDir=%q skinsDir=%q",
+		splitFileDir,
+		skinsDir,
+	)
 	updateChannel := make(chan *Service)
 	return &Service{
 		SplitFileDir:         splitFileDir,
 		SkinsDir:             skinsDir,
 		SpeedRunAPIBase:      "",
 		KeyConfig:            map[command.Command]keyinfo.KeyData{},
+		RollingAverageRuns:   20,
 		configUpdatedChannel: updateChannel,
 	}, updateChannel
 }
@@ -61,14 +69,17 @@ func (s *Service) UpdateKeyBinding(c command.Command, data keyinfo.KeyData) {
 func (s *Service) CreateDefaultConfig() {
 	s.KeyConfig = make(map[command.Command]keyinfo.KeyData)
 	s.EnsureDefaultKeyBindings()
+	s.RollingAverageRuns = 20
 	s.sendUIBridgeUpdate()
 	logger.Infof(logModule, "created default config")
 }
 
 func (s *Service) sendUIBridgeUpdate() {
+	logger.Debug(logModule, "sending configuration update")
 	select {
 	case s.configUpdatedChannel <- s:
 	default:
+		logger.Debug(logModule, "configuration update skipped; UI not ready")
 	}
 }
 
@@ -91,7 +102,31 @@ func (s *Service) EnsureDefaultKeyBindings() {
 
 	for _, c := range defaults {
 		if _, ok := s.KeyConfig[c]; !ok {
+			logger.Debugf(logModule, "adding default binding for %v", c)
 			s.KeyConfig[c] = keyinfo.KeyData{}
 		}
 	}
+}
+
+func (s *Service) Apply(newConfig *Service) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.KeyConfig = make(map[command.Command]keyinfo.KeyData, len(newConfig.KeyConfig))
+
+	for k, v := range newConfig.KeyConfig {
+		s.KeyConfig[k] = v
+	}
+
+	s.SpeedRunAPIBase = newConfig.SpeedRunAPIBase
+	s.GlobalHotkeysActive = newConfig.GlobalHotkeysActive
+	s.SelectedSkin = newConfig.SelectedSkin
+	s.SplitFileDir = newConfig.SplitFileDir
+	s.SkinsDir = newConfig.SkinsDir
+	s.RollingAverageRuns = newConfig.RollingAverageRuns
+}
+
+// NotifyUpdate sends the current configuration to the UI.
+func (s *Service) NotifyUpdate() {
+	s.sendUIBridgeUpdate()
 }

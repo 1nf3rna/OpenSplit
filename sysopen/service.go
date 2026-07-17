@@ -63,6 +63,7 @@ func (s *Service) OpenFolder(path string) error {
 		return nil
 	}
 
+	logger.Infof(logModule, "opening folder %s", abs)
 	switch runtime.GOOS {
 	case "windows":
 		return exec.CommandContext(s.ctx, "explorer", filepath.FromSlash(abs)).Start()
@@ -71,6 +72,7 @@ func (s *Service) OpenFolder(path string) error {
 	case "linux":
 		return exec.CommandContext(s.ctx, "xdg-open", abs).Start()
 	default:
+		logger.Errorf(logModule, "unsupported OS %s", runtime.GOOS)
 		return errors.New("unsupported OS")
 	}
 }

@@ -1,3 +1,8 @@
+/**
+ * Calls the supplied handler whenever a pointer event occurs
+ * outside of the referenced element.
+ */
+
 import React, { useEffect } from "react";
 
 export function useClickOutside(ref: React.RefObject<HTMLDivElement | null>, handler: (ev: PointerEvent) => void) {

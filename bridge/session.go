@@ -10,6 +10,7 @@ import (
 
 const uiModelEventName = "ui:model"
 
+// Session forwards session updates to the frontend.
 type Session struct {
 	runtimeProvider       RuntimeProvider
 	sessionUpdatedChannel chan *session.Service
@@ -27,6 +28,7 @@ func (s *Session) StartUIPump() {
 		for {
 			updatedSession, ok := <-s.sessionUpdatedChannel
 			if !ok {
+				logger.Debug(logModule, "session UI pump stopped")
 				return
 			}
 			s.runtimeProvider.EventsEmit("session:update", adapters.DomainToDTO(updatedSession))
@@ -35,6 +37,7 @@ func (s *Session) StartUIPump() {
 	logger.Debug(logModule, "session UI pump started")
 }
 
+// View identifies the current application screen.
 type View string
 
 const (
@@ -45,6 +48,7 @@ const (
 	AppViewSettings      View = "settings"
 )
 
+// AppViewModel describes the UI state presented to the frontend.
 type AppViewModel struct {
 	View View `json:"view"`
 

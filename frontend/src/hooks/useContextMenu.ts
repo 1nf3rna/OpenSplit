@@ -1,5 +1,7 @@
 import React, { useCallback, useState } from "react";
 
+import { log } from "../utils/logger";
+
 export type MenuSeparator = { type: "separator" };
 export type MenuAction = {
     label: string;
@@ -25,7 +27,10 @@ export function useContextMenu() {
     const [state, setState] = useState<ContextMenuState>({ open: false, x: 0, y: 0 });
 
     const onContextMenu = useCallback((e: React.MouseEvent<HTMLElement>) => {
-        console.log("opening context menu");
+        log.debug("[ContextMenu] Open", {
+            x: e.clientX,
+            y: e.clientY,
+        });
         e.preventDefault();
         setState({ open: true, x: e.clientX, y: e.clientY });
     }, []);

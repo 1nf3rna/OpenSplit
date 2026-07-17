@@ -4,43 +4,52 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 	"time"
+
+	"github.com/zellydev-games/opensplit/logger"
 )
 
+// WRSearchResult is the frontend-friendly representation of the WR search.
 type WRSearchResult struct {
 	Data []WRSearchItem `json:"data"`
 }
 
+// WRSearchItem describes a speedrun.com WR.
 type WRSearchItem struct {
 	Runs    []WRSearchRuns `json:"runs"`
 	Players WRPlayerEmbed  `json:"players"`
 }
 
+// WRPlayerEmbed describes a speedrun.com player array.
 type WRPlayerEmbed struct {
 	Data []WRPlayer `json:"data"`
 }
 
+// WRPlayer describes a speedrun.com player.
 type WRPlayer struct {
 	Names WRPlayerNames `json:"names"`
 }
 
+// WRPlayerNames describes a speedrun.com player's names.
 type WRPlayerNames struct {
 	International string `json:"international"`
 }
 
+// WRSearchRuns describes a speedrun.com WR runs.
 type WRSearchRuns struct {
 	Place int   `json:"place"`
 	Run   WRRun `json:"run"`
 }
 
+// WRRun describes a speedrun.com WR run.
 type WRRun struct {
 	ID   string `json:"id"`
 	Time WRTime `json:"times"`
 }
 
+// WRTime describes a speedrun.com WR run time.
 type WRTime struct {
 	RealTime float64 `json:"realtime_t"`
 	InGame   float64 `json:"ingame_t"`
@@ -52,7 +61,10 @@ func (s *Service) SearchWR(categoryID string) (WRSearchResult, error) {
 		s.baseURL,
 		url.QueryEscape(categoryID),
 	)
-	log.Println(endpoint)
+	logger.Debugf(logModule,
+		"GET %s",
+		endpoint,
+	)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -71,7 +83,7 @@ func (s *Service) SearchWR(categoryID string) (WRSearchResult, error) {
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
-			log.Printf("error closing response body: %v", err)
+			logger.Errorf(logModule, "error closing response body: %v", err)
 		}
 	}()
 
@@ -85,6 +97,9 @@ func (s *Service) SearchWR(categoryID string) (WRSearchResult, error) {
 		return WRSearchResult{}, err
 	}
 
-	log.Println(result)
+	logger.Debugf(logModule,
+		"received WR: %v",
+		result,
+	)
 	return result, nil
 }

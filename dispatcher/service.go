@@ -16,11 +16,13 @@ type RuntimeProvider interface {
 	OpenFileDialog(runtime.OpenDialogOptions) (string, error)
 }
 
+// FolderProvider opens application data folders in the platform's file browser.
 type FolderProvider interface {
 	OpenSplitFileDir()
 	OpenSkinsDir()
 }
 
+// RepoProvider exposes repository operations needed by the dispatcher.
 type RepoProvider interface {
 	LoadSplitFile() (dto.SplitFile, error)
 	SaveSplitFile(dto.SplitFile) error
@@ -35,10 +37,12 @@ type DispatchReply struct {
 	Message string `json:"message"`
 }
 
+// DispatchReceiver handles dispatched commands from the UI or autosplitter.
 type DispatchReceiver interface {
 	ReceiveDispatch(command.Command, *string) (DispatchReply, error)
 }
 
+// Service serializes command dispatches and forwards them to the active receiver.
 type Service struct {
 	mu             sync.Mutex
 	receiver       DispatchReceiver
@@ -60,6 +64,7 @@ func NewService(receiver DispatchReceiver,
 	}
 }
 
+// Dispatch forwards a command to the registered receiver.
 func (s *Service) Dispatch(cmd command.Command, payload *string) (DispatchReply, error) {
 	logger.Debugf(logModule, "dispatching cmd: %v", cmd)
 	s.mu.Lock()
@@ -67,14 +72,25 @@ func (s *Service) Dispatch(cmd command.Command, payload *string) (DispatchReply,
 	return s.receiver.ReceiveDispatch(cmd, payload)
 }
 
+// OpenSplitFileFolder opens the configured split file directory.
 func (s *Service) OpenSplitFileFolder() {
+	logger.Debug(logModule, "opening split file folder")
 	s.folderProvider.OpenSplitFileDir()
 }
 
+// OpenSkinsFolder opens the configured skins directory.
 func (s *Service) OpenSkinsFolder() {
+	logger.Debug(logModule, "opening skins folder")
 	s.folderProvider.OpenSkinsDir()
 }
 
+// ExportSplitFile exports the currently loaded split file.
 func (s *Service) ExportSplitFile(platform string) error {
-	return s.repo.Export()
+	logger.Info(logModule, "exporting split file")
+	err := s.repo.Export()
+	if err != nil {
+		logger.Errorf(logModule, "export failed: %v", err)
+	}
+
+	return err
 }

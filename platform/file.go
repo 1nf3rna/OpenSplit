@@ -4,6 +4,7 @@ import "os"
 
 const logModule = "platform"
 
+// FileRuntime provides filesystem operations used by the repository layer.
 type FileRuntime struct{}
 
 func NewFileRuntime() *FileRuntime {

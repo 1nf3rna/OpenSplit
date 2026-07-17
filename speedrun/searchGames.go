@@ -4,10 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 	"time"
+
+	"github.com/zellydev-games/opensplit/logger"
 )
 
 type gameSearchResponse struct {
@@ -20,14 +21,17 @@ type gameSearchAPIItem struct {
 	PlatformIDs []string        `json:"platforms"`
 }
 
+// GameSearchItem describes a speedrun.com game name.
 type GameSearchNames struct {
 	International string `json:"international"`
 }
 
+// GameSearchResult is the frontend-friendly representation of a game search.
 type GameSearchResult struct {
 	Data []GameSearchItem `json:"data"`
 }
 
+// GameSearchItem describes a speedrun.com game.
 type GameSearchItem struct {
 	ID        string          `json:"id"`
 	Names     GameSearchNames `json:"names"`
@@ -40,7 +44,10 @@ func (s *Service) SearchGames(query string) (GameSearchResult, error) {
 		s.baseURL,
 		url.QueryEscape(query),
 	)
-	log.Println(endpoint)
+	logger.Debugf(logModule,
+		"GET %s",
+		endpoint,
+	)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -59,7 +66,7 @@ func (s *Service) SearchGames(query string) (GameSearchResult, error) {
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
-			log.Printf("error closing response body: %v", err)
+			logger.Debugf(logModule, "error closing response body: %v", err)
 		}
 	}()
 
@@ -72,8 +79,11 @@ func (s *Service) SearchGames(query string) (GameSearchResult, error) {
 	if err := json.NewDecoder(resp.Body).Decode(&api); err != nil {
 		return GameSearchResult{}, err
 	}
-
-	log.Printf("%+v\n", api.Data[0])
+	logger.Debugf(logModule,
+		"received %d games: example %v",
+		len(api.Data),
+		api.Data[0],
+	)
 
 	result := GameSearchResult{
 		Data: make([]GameSearchItem, len(api.Data)),
@@ -87,6 +97,10 @@ func (s *Service) SearchGames(query string) (GameSearchResult, error) {
 		}
 	}
 
-	log.Println(result)
+	logger.Debugf(logModule,
+		"filtered %d games: example %v",
+		len(result.Data),
+		result,
+	)
 	return result, nil
 }
