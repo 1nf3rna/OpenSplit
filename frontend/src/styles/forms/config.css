@@ -1,0 +1,34 @@
+@layer components {
+    .actions {
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .config-skins {
+        margin-bottom: 20px;
+    }
+
+    .config-skin-select {
+        width: 50%;
+        margin-left: 20px;
+    }
+
+    .hotkeyContainer {
+        align-items: flex-end;
+    }
+
+    .hotkeyID {
+        width: 150px;
+    }
+
+    .hotkeyValue {
+        font-weight: normal;
+        font-style: italic;
+        flex: 1;
+        font-size: 14px;
+    }
+
+    .options {
+        flex-grow: 1;
+    }
+}

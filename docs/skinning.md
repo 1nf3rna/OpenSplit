@@ -30,7 +30,7 @@ Structural changes should be isolated to `overrides.css`.
 OpenSplit defines the following CSS layer order:
 
 ```css
-@layer reset, components, vars, skins, overrides;
+@layer reset, vars, components, skins, overrides;
 ```
 
 Layers are applied in order.
@@ -690,8 +690,6 @@ The following IDs are intended for skins.
 
 #splitList
 
-#splitBody
-
 #splitContainer
 
 #gameInfo
@@ -701,8 +699,6 @@ The following IDs are intended for skins.
 #gameCategory
 
 #attempts
-
-#timer-container
 
 #time-container
 
@@ -870,7 +866,7 @@ Example:
     flex-direction: column;
   }
 
-  #timer-container {
+  #time-container {
     order: -1;
   }
 }
@@ -886,10 +882,6 @@ A skin can create a side-by-side layout:
 
 ```css
 @layer overrides {
-  #splitBody {
-    flex-direction: row;
-  }
-
   #gameInfo {
     width: 300px;
   }

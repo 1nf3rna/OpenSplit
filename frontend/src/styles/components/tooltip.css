@@ -1,0 +1,39 @@
+@layer components {
+    .icon-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+
+        padding: 2px 4px;
+
+        border: 0;
+
+        background: transparent;
+
+        cursor: pointer;
+    }
+
+    .icon-btn:focus {
+        outline: 2px solid currentColor;
+        outline-offset: 2px;
+    }
+
+    .tooltip-bubble {
+        position: absolute;
+
+        padding: 4px 8px;
+
+        border-radius: 4px;
+
+        background: rgba(0, 0, 0, 0.85);
+
+        color: white;
+
+        font-size: 12px;
+        white-space: nowrap;
+
+        pointer-events: none;
+
+        z-index: 1000;
+    }
+}

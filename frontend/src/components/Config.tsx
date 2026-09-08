@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 import { Dispatch, OpenSkinsFolder, OpenSplitFileFolder } from "../../wailsjs/go/dispatcher/Service";
 import { GetAvailableSkins, SetSkin } from "../../wailsjs/go/skin/Service";
-import { EventsOn, WindowSetSize } from "../../wailsjs/runtime";
+import { EventsOn } from "../../wailsjs/runtime";
 import { Command } from "../models/command";
 import { ConfigPayload, KeyInfo } from "../models/configPayload";
 import { log } from "../utils/logger";
@@ -21,8 +21,6 @@ export default function Config({ configPayload }: ConfigParams) {
     const [rollingAvg, setRollingAvg] = useState<number>(configPayload.rolling_average_runs ?? DEFAULT_ROLLING_AVG);
 
     useEffect(() => {
-        WindowSetSize(700, 900);
-
         const loadSkins = async () => {
             const skins = await GetAvailableSkins();
             log.debug("Loaded skins", skins);
@@ -110,8 +108,8 @@ export default function Config({ configPayload }: ConfigParams) {
         ];
 
         return commands.map(([command, label]) => (
-            <div className="row" key={command}>
-                <div className="hotkeyContainer">
+            <div className="hotkey-row" key={command}>
+                <div className="row hotkeyContainer">
                     <p className="hotkeyID">{label}:</p>
                     <p className="hotkeyValue">{getHotkeyName(config.key_config?.[command])}</p>
 
