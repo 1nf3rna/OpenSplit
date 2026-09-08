@@ -7,21 +7,30 @@ import (
 
 func DomainToDTO(svc *session.Service) *dto.Session {
 	var dtoSplitFile *dto.SplitFile
-	sf, loaded := svc.SplitFile()
-	if loaded {
+
+	sf, splitFileLoaded := svc.SplitFile()
+	if splitFileLoaded {
 		dtoSF := DomainSplitFileToDTO(sf)
 		dtoSplitFile = &dtoSF
 	}
-	var dtoRun *dto.Run = nil
-	currentRun, loaded := svc.Run()
-	if loaded {
-		r := domainRunToDTO(currentRun, sf.Version)
+
+	var dtoRun *dto.Run
+
+	currentRun, runLoaded := svc.Run()
+	if runLoaded {
+		r := domainRunToDTO(currentRun)
 		dtoRun = &r
+	}
+
+	var leafSegments []dto.Segment
+
+	if splitFileLoaded {
+		leafSegments = domainSegmentsToDTO(sf.DeepCopyLeafSegments())
 	}
 
 	return &dto.Session{
 		LoadedSplitFile:     dtoSplitFile,
-		LeafSegments:        domainSegmentsToDTO(sf.DeepCopyLeafSegments()),
+		LeafSegments:        leafSegments,
 		CurrentRun:          dtoRun,
 		CurrentSegmentIndex: svc.Index(),
 		SessionState:        dto.SessionState(svc.State()),
@@ -36,8 +45,7 @@ func CleanSplitFile(dtoSplitFile dto.SplitFile) (dto.SplitFile, error) {
 	}
 
 	sf := session.DeepCopySplitFile(&splitFile)
-	sf.WindowY = 100
-	sf.WindowX = 100
+
 	sf.Attempts = 0
 	sf.SOB = 0
 	sf.Runs = []session.Run{}
@@ -51,9 +59,9 @@ func CleanSplitFile(dtoSplitFile dto.SplitFile) (dto.SplitFile, error) {
 }
 
 func clearSegmentRecursive(segment *session.Segment) {
-	segment.PB = 0
-	segment.Gold = 0
-	segment.Average = 0
+	segment.PB = -1
+	segment.Gold = -1
+	segment.Average = -1
 
 	for i := 0; i < len(segment.Children); i++ {
 		clearSegmentRecursive(&segment.Children[i])

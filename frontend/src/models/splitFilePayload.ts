@@ -14,6 +14,20 @@ import RunPayload from "./runPayload";
 import SegmentPayload from "./segmentPayload";
 import WorldRecord from "./worldRecord";
 
+export type SplitterLayout = "vertical" | "horizontal";
+
+export type SplitterWindow = {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+};
+
+export type SplitterWindows = {
+    vertical: SplitterWindow;
+    horizontal: SplitterWindow;
+};
+
 export type SplitVariable = {
     id: string;
     name: string;
@@ -44,10 +58,34 @@ export default class SplitFilePayload {
 
     wr: WorldRecord = new WorldRecord();
 
-    window_x: number = 100;
-    window_y: number = 100;
-    window_height: number = 550;
-    window_width: number = 350;
+    /**
+     * Persisted splitter layout.
+     *
+     * An empty value means that the split file has not explicitly
+     * selected a layout and the skin's --splitter-layout value should
+     * be used as the default.
+     */
+    layout: SplitterLayout | "" = "";
+
+    /**
+     * Persisted window geometry for each splitter layout.
+     *
+     * Each layout maintains its own independent position and size.
+     */
+    windows: SplitterWindows = {
+        vertical: {
+            x: 100,
+            y: 100,
+            width: 350,
+            height: 550,
+        },
+        horizontal: {
+            x: 100,
+            y: 100,
+            width: 900,
+            height: 400,
+        },
+    };
 
     constructor(init?: Partial<SplitFilePayload>) {
         if (init) {

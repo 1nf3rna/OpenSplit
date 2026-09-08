@@ -55,6 +55,62 @@ func buildSplitFileName(sf dto.SplitFile) string {
 	return strings.Join(parts, "-") + ".osf"
 }
 
+func (s *Service) SaveSplitFile(splitFile dto.SplitFile) error {
+	// Merge statistics from the currently loaded split file when
+	// saving a newer split file version.
+	s.splitFileLock.RLock()
+	existingBytes, err := s.repository.GetLoadedSplitFile()
+	s.splitFileLock.RUnlock()
+
+	if err == nil {
+		existingDTO, err := adapters.JSONSplitFileToDTO(string(existingBytes))
+		if err == nil {
+			existingDomain, err := adapters.DTOSplitFileToDomain(existingDTO)
+			if err == nil {
+				newDomain, err := adapters.DTOSplitFileToDomain(splitFile)
+				if err == nil {
+					if newDomain.Version > existingDomain.Version {
+						logger.Infof(
+							logModule,
+							"upgrading split file v%d -> v%d",
+							existingDomain.Version,
+							newDomain.Version,
+						)
+
+						session.UpgradeSplitFile(&existingDomain, &newDomain)
+
+						splitFile = adapters.DomainSplitFileToDTO(newDomain)
+					}
+				}
+			}
+		}
+	}
+
+	// minimum sizes and position
+	splitFile.WindowX = max(10, splitFile.WindowX)
+	splitFile.WindowY = max(10, splitFile.WindowY)
+	splitFile.WindowWidth = max(100, splitFile.WindowWidth)
+	splitFile.WindowHeight = max(100, splitFile.WindowHeight)
+
+	payload, err := adapters.SplitFileToFrontEnd(splitFile)
+	if err != nil {
+		return err
+	}
+	identifier := buildSplitFileName(splitFile)
+
+	logger.Debugf(logModule, "repository saving split file: %s", identifier)
+	s.splitFileLock.Lock()
+	err = s.repository.SaveSplitFile(payload, identifier, false)
+	s.splitFileLock.Unlock()
+	if err != nil {
+		logger.Errorf(logModule, "repo failed to save splitfile: %s", err)
+		return err
+	}
+
+	logger.Infof(logModule, "repository saved split file: %s", identifier)
+	return nil
+}
+
 // LoadSplitFile reads splitfile bytes from a repo and returns it as a session.SplitFile
 func (s *Service) LoadSplitFile() (dto.SplitFile, error) {
 	logger.Debug(logModule, "loading split file")
@@ -95,59 +151,75 @@ func (s *Service) SaveSplitFileWindowDimensions(X int, Y int, Width int, Height 
 	return s.SaveSplitFile(diskSplitFile)
 }
 
-func (s *Service) SaveSplitFile(splitFile dto.SplitFile) error {
-	// Merge statistics from the currently loaded split file when
-	// saving a newer split file version.
-	s.splitFileLock.RLock()
-	existingBytes, err := s.repository.GetLoadedSplitFile()
-	s.splitFileLock.RUnlock()
-
-	if err == nil {
-		existingDTO, err := adapters.JSONSplitFileToDTO(string(existingBytes))
-		if err == nil {
-			existingDomain, err := adapters.DTOSplitFileToDomain(existingDTO)
-			if err == nil {
-				newDomain, err := adapters.DTOSplitFileToDomain(splitFile)
-				if err == nil {
-					if newDomain.Version > existingDomain.Version {
-						session.UpgradeSplitFile(&existingDomain, &newDomain)
-						logger.Infof(
-							logModule,
-							"upgrading split file v%d -> v%d",
-							existingDomain.Version,
-							newDomain.Version,
-						)
-						newDomain.RebuildStatistics()
-						splitFile = adapters.DomainSplitFileToDTO(newDomain)
-					}
-				}
-			}
-		}
-	}
-
-	payload, err := adapters.SplitFileToFrontEnd(splitFile)
-	if err != nil {
-		return err
-	}
-	identifier := buildSplitFileName(splitFile)
-
-	// minimum sizes and position
-	splitFile.WindowX = max(10, splitFile.WindowX)
-	splitFile.WindowY = max(10, splitFile.WindowY)
-	splitFile.WindowWidth = max(100, splitFile.WindowWidth)
-	splitFile.WindowHeight = max(100, splitFile.WindowHeight)
-
-	logger.Debugf(logModule, "repository saving split file: %s", identifier)
+func (s *Service) SaveWorldRecordDisplay(show bool) error {
 	s.splitFileLock.Lock()
-	err = s.repository.SaveSplitFile(payload, identifier, false)
-	s.splitFileLock.Unlock()
+	defer s.splitFileLock.Unlock()
+
+	existingBytes, err := s.repository.GetLoadedSplitFile()
 	if err != nil {
-		logger.Errorf(logModule, "repo failed to save splitfile: %s", err)
 		return err
 	}
 
-	logger.Infof(logModule, "repository saved split file: %s", identifier)
-	return nil
+	dto, err := adapters.JSONSplitFileToDTO(string(existingBytes))
+	if err != nil {
+		return err
+	}
+
+	dto.WR.Show = show
+
+	payload, err := adapters.SplitFileToFrontEnd(dto)
+	if err != nil {
+		return err
+	}
+
+	identifier := buildSplitFileName(dto)
+
+	return s.repository.SaveSplitFile(
+		payload,
+		identifier,
+		false,
+	)
+}
+
+// SaveSplitFileLayout updates only the persisted splitter layout.
+func (s *Service) SaveSplitFileLayout(layout string) error {
+	if layout != "vertical" && layout != "horizontal" {
+		return errors.New("invalid splitter layout")
+	}
+
+	s.splitFileLock.Lock()
+	defer s.splitFileLock.Unlock()
+
+	existingBytes, err := s.repository.GetLoadedSplitFile()
+	if err != nil {
+		return err
+	}
+
+	dto, err := adapters.JSONSplitFileToDTO(string(existingBytes))
+	if err != nil {
+		return err
+	}
+
+	dto.Layout = layout
+
+	payload, err := adapters.SplitFileToFrontEnd(dto)
+	if err != nil {
+		return err
+	}
+
+	identifier := buildSplitFileName(dto)
+
+	logger.Debugf(
+		logModule,
+		"saving splitter layout: %s",
+		layout,
+	)
+
+	return s.repository.SaveSplitFile(
+		payload,
+		identifier,
+		false,
+	)
 }
 
 func (s *Service) Export() error {

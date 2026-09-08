@@ -1,0 +1,38 @@
+@layer components {
+    .autocomplete {
+        position: relative;
+        display: inline-block;
+        width: 100%;
+    }
+
+    .autocomplete-list {
+        position: absolute;
+        top: calc(100% + 2px);
+        left: 0;
+
+        margin: 0;
+        padding: 0;
+
+        list-style: none;
+
+        max-height: 300px;
+        overflow-y: auto;
+
+        background: #282828;
+        border: 1px solid #666;
+        border-radius: 4px;
+
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+
+        z-index: 9999;
+    }
+
+    .autocomplete-list li {
+        padding: 6px 10px;
+        cursor: pointer;
+    }
+
+    .autocomplete-list li:hover {
+        background: #640199;
+    }
+}

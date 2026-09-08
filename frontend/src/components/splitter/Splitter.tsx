@@ -1,176 +1,95 @@
-/**
- * Primary race timer window.
- *
- * Hosts:
- *  - Timer
- *  - Segment list
- *  - Context menu
- *  - Comparison mode
- */
+import { Dispatch, SetStateAction, useEffect, useRef } from "react";
 
-import React, { useEffect } from "react";
-
-import { Dispatch } from "../../../wailsjs/go/dispatcher/Service";
-import { EventsOn, WindowSetPosition, WindowSetSize } from "../../../wailsjs/runtime";
-import { MenuItem, useContextMenu } from "../../hooks/useContextMenu";
-import { Command } from "../../models/command";
+import { Comparison, useComparison } from "../../hooks/splitter/useComparison";
+import { useSegmentList } from "../../hooks/splitter/useSegmentList";
+import { useSplitterLayout } from "../../hooks/splitter/useSplitterLayout";
+import { SplitterLayout, useSplitterMenu } from "../../hooks/splitter/useSplitterMenu";
+import { useSplitterMinimumSize } from "../../hooks/splitter/useSplitterMinimumSize";
+import { useContextMenu } from "../../hooks/useContextMenu";
 import { ConfigPayload } from "../../models/configPayload";
 import SessionPayload from "../../models/sessionPayload";
-import { log } from "../../utils/logger";
 import { ContextMenu } from "../ContextMenu";
-import SegmentList from "./SegmentList";
-import Timer from "./Timer";
-
-export enum CompareAgainst {
-    Best = "best",
-    Average = "average",
-    SumOfBest = "sumOfBest",
-}
-
-export type Comparison = CompareAgainst.Best | CompareAgainst.Average | CompareAgainst.SumOfBest;
-
-const comparisons: Comparison[] = [CompareAgainst.Average, CompareAgainst.Best, CompareAgainst.SumOfBest];
+import SplitterContent from "./SplitterContent";
 
 type SplitterParams = {
     sessionPayload: SessionPayload;
     configPayload: ConfigPayload;
+    disableContextMenu?: boolean;
+    forceExpandAll?: boolean;
+
+    comparison?: Comparison;
+    onComparisonChange?: Dispatch<SetStateAction<Comparison>>;
+
+    layout?: SplitterLayout;
+    onLayoutChange?: Dispatch<SetStateAction<SplitterLayout>>;
 };
 
-export default function Splitter({ sessionPayload, configPayload }: SplitterParams) {
+export default function Splitter({
+    sessionPayload,
+    configPayload,
+    disableContextMenu = false,
+    forceExpandAll = false,
+    comparison: controlledComparison,
+    onComparisonChange,
+    layout: controlledLayout,
+    onLayoutChange,
+}: SplitterParams) {
+    const splitterRef = useRef<HTMLDivElement>(null);
+
     const contextMenu = useContextMenu();
-    const [contextMenuItems, setContextMenuItems] = React.useState<MenuItem[]>([]);
-    const [comparison, setComparison] = React.useState<Comparison>(CompareAgainst.Average);
-    const [globalHotkeys, setGlobalHotkeys] = React.useState<boolean>(configPayload.global_hotkeys_active);
-    const comparisonLabel: Record<Comparison, string> = {
-        [CompareAgainst.Average]: "Comparing Against: Average",
-        [CompareAgainst.Best]: "Comparing Against: Best Run",
-        [CompareAgainst.SumOfBest]: "Comparing Against: Sum of Best Segments",
-    };
+
+    const { comparison, setComparison } = useComparison(controlledComparison, onComparisonChange);
+
+    const { initialLayout } = useSplitterLayout({
+        splitterRef,
+        sessionPayload,
+        controlledLayout,
+    });
+
+    useSplitterMinimumSize(splitterRef);
+
+    const { layout: menuLayout, items: contextMenuItems } = useSplitterMenu({
+        disableContextMenu,
+        globalHotkeysInitial: configPayload.global_hotkeys_active,
+        comparison,
+        setComparison,
+        sessionPayload,
+        initialLayout,
+    });
+
+    const layout = controlledLayout ?? menuLayout;
 
     useEffect(() => {
-        const rotate = (dir: number) => {
-            setComparison((current) => {
-                const index = comparisons.indexOf(current);
-                const next = (index + dir + comparisons.length) % comparisons.length;
-                return comparisons[next];
-            });
-            log.debug("Comparison mode changed", comparison);
-        };
+        if (controlledLayout === undefined) {
+            return;
+        }
 
-        const unsubLeft = EventsOn("comparison:left", () => rotate(-1));
-        const unsubRight = EventsOn("comparison:right", () => rotate(1));
+        if (menuLayout !== controlledLayout) {
+            onLayoutChange?.(controlledLayout);
+        }
+    }, [controlledLayout, menuLayout, onLayoutChange]);
 
-        return () => {
-            unsubLeft();
-            unsubRight();
-        };
-    }, []);
-
-    useEffect(() => {
-        (async () => {
-            setContextMenuItems(await buildContextMenu());
-        })();
-    }, [globalHotkeys, comparison, sessionPayload.loaded_split_file?.wr?.show]);
-
-    useEffect(() => {
-        (async () => {
-            if (sessionPayload.loaded_split_file) {
-                WindowSetSize(
-                    sessionPayload.loaded_split_file.window_width,
-                    sessionPayload.loaded_split_file.window_height,
-                );
-
-                WindowSetPosition(sessionPayload.loaded_split_file.window_x, sessionPayload.loaded_split_file.window_y);
-            }
-        })();
-    }, [sessionPayload.loaded_split_file?.id]);
-
-    // regenerated whenever settings change
-    const buildContextMenu = async (): Promise<MenuItem[]> => {
-        const contextMenuItems: MenuItem[] = [];
-        contextMenuItems.push({
-            label: (globalHotkeys ? "✓ " : "") + "Global Hotkeys",
-            onClick: async () => {
-                Dispatch(Command.TOGGLEGLOBAL, null).then((r) => {
-                    if (r.code == 0) {
-                        setGlobalHotkeys(r.message === "true");
-                    }
-                });
-            },
-        });
-
-        contextMenuItems.push({
-            label: "Edit Split File",
-            onClick: async () => {
-                await Dispatch(Command.EDIT, null);
-            },
-        });
-
-        contextMenuItems.push({
-            label: "Save",
-            onClick: async () => {
-                await Dispatch(Command.SAVE, null);
-            },
-        });
-
-        contextMenuItems.push({ type: "separator" });
-
-        contextMenuItems.push({
-            label: ((sessionPayload.loaded_split_file?.wr?.show ?? false) ? "✓ " : "") + "Display World Record",
-            onClick: async () => {
-                await Dispatch(Command.TOGGLEWR, null);
-            },
-        });
-
-        contextMenuItems.push({ type: "separator" });
-
-        contextMenuItems.push({
-            label: (comparison == CompareAgainst.Average ? "✓ " : "") + "Compare Against Average",
-            onClick: () => {
-                log.debug("Comparison mode changed", comparison);
-                setComparison(CompareAgainst.Average);
-            },
-        });
-
-        contextMenuItems.push({
-            label: (comparison == CompareAgainst.Best ? "✓ " : "") + "Compare Against Best Run",
-            onClick: () => {
-                log.debug("Comparison mode changed", comparison);
-                setComparison(CompareAgainst.Best);
-            },
-        });
-
-        contextMenuItems.push({
-            label: (comparison == CompareAgainst.SumOfBest ? "✓ " : "") + "Compare Against Sum of Best Segments",
-            onClick: () => {
-                log.debug("Comparison mode changed", comparison);
-                setComparison(CompareAgainst.SumOfBest);
-            },
-        });
-
-        contextMenuItems.push({ type: "separator" });
-
-        contextMenuItems.push({
-            label: "Close Split File",
-            onClick: () => {
-                Dispatch(Command.CLOSE, null);
-            },
-        });
-
-        contextMenuItems.push({
-            label: "Exit OpenSplit",
-            onClick: async () => Dispatch(Command.QUIT, null),
-        });
-
-        return contextMenuItems;
-    };
+    const { completeClassName, rows, finalRow, containerRef } = useSegmentList({
+        sessionPayload,
+        comparison,
+        forceExpandAll,
+    });
 
     return (
-        <div {...contextMenu.bind} id="splitter">
-            <ContextMenu state={contextMenu.state} close={contextMenu.close} items={contextMenuItems} />
-            <SegmentList sessionPayload={sessionPayload} comparison={comparison} />
-            <div className="comparison-mode">{comparisonLabel[comparison]}</div>
-            <Timer offset={sessionPayload.loaded_split_file?.offset ?? 0} wr={sessionPayload.loaded_split_file?.wr} />
+        <div ref={splitterRef} {...(!disableContextMenu ? contextMenu.bind : {})} id="splitter" data-layout={layout}>
+            {!disableContextMenu && (
+                <ContextMenu state={contextMenu.state} close={contextMenu.close} items={contextMenuItems} />
+            )}
+
+            <SplitterContent
+                sessionPayload={sessionPayload}
+                comparison={comparison}
+                forceExpandAll={forceExpandAll}
+                completeClassName={completeClassName}
+                containerRef={containerRef}
+                rows={rows}
+                finalRow={finalRow}
+            />
         </div>
     );
 }
