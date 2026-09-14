@@ -21,7 +21,8 @@
         justify-content: center;
         align-items: center;
         width: 12px;
-        min-height: 8px;
+        height: 12px;
+        min-height: 6px;
         margin-right: 6px;
         padding: 3px;
         border: 0;
@@ -50,12 +51,21 @@
         padding: 0;
         border-collapse: collapse;
         border-spacing: 0;
-        table-layout: fixed;
     }
     #splitter[data-layout="vertical"] #splitContainer table tr,
     #splitter[data-layout="vertical"] #finalSegment table tr {
         width: 100%;
         min-width: 0;
+        height: max(
+            var(--splitter-segment-name-min-height, 40px),
+            var(--splitter-segment-delta-min-height, 32px),
+            var(--splitter-segment-comparison-min-height, 32px),
+            var(--splitter-segment-time-min-height, 32px)
+        );
+    }
+
+    #splitter[data-layout="vertical"][data-has-segment-icons="true"] #splitContainer table tr,
+    #splitter[data-layout="vertical"][data-has-segment-icons="true"] #finalSegment table tr {
         height: max(
             var(--splitter-segment-icon-min-height, 40px),
             var(--splitter-segment-name-min-height, 40px),
@@ -64,6 +74,7 @@
             var(--splitter-segment-time-min-height, 32px)
         );
     }
+
     #splitter[data-layout="vertical"] #finalSegment table td {
         box-sizing: border-box;
         min-width: 0;
@@ -81,6 +92,7 @@
         min-height: var(--splitter-segment-icon-min-height, 0px);
         min-width: 0;
         box-sizing: border-box;
+        padding-left: calc(5px + (var(--segment-depth, 0) * 16px));
     }
     #splitter[data-layout="vertical"] #splitContainer .splitName,
     #splitter[data-layout="vertical"] #finalSegment .splitName {
@@ -91,6 +103,7 @@
         word-break: normal;
         hyphens: none;
         box-sizing: border-box;
+        padding-left: calc(5px + (var(--segment-depth, 0) * 16px));
     }
     #splitter[data-layout="vertical"] #splitContainer .splitDelta,
     #splitter[data-layout="vertical"] #finalSegment .splitDelta {
@@ -98,20 +111,26 @@
         min-width: 0;
         white-space: nowrap;
         box-sizing: border-box;
+        padding-right: 4px;
     }
+
     #splitter[data-layout="vertical"] #splitContainer .splitComparison,
     #splitter[data-layout="vertical"] #finalSegment .splitComparison {
         min-height: var(--splitter-segment-comparison-min-height, 0px);
         min-width: 0;
         white-space: nowrap;
         box-sizing: border-box;
+        padding-left: 4px;
+        padding-right: 4px;
     }
+
     #splitter[data-layout="vertical"] #splitContainer .splitTime,
     #splitter[data-layout="vertical"] #finalSegment .splitTime {
         min-height: var(--splitter-segment-time-min-height, 0px);
         min-width: 0;
         white-space: nowrap;
         box-sizing: border-box;
+        padding-left: 4px;
     }
 
     /*
@@ -125,21 +144,18 @@
         flex-direction: column;
         flex: 0 0
             max(
-                var(--splitter-segment-icon-min-width, 40px),
                 var(--splitter-segment-name-min-width, 110px),
                 var(--splitter-segment-delta-min-width, 70px),
                 var(--splitter-segment-comparison-min-width, 70px),
                 var(--splitter-segment-time-min-width, 70px)
             );
         width: max(
-            var(--splitter-segment-icon-min-width, 40px),
             var(--splitter-segment-name-min-width, 110px),
             var(--splitter-segment-delta-min-width, 70px),
             var(--splitter-segment-comparison-min-width, 70px),
             var(--splitter-segment-time-min-width, 70px)
         );
         min-width: max(
-            var(--splitter-segment-icon-min-width, 40px),
             var(--splitter-segment-name-min-width, 110px),
             var(--splitter-segment-delta-min-width, 70px),
             var(--splitter-segment-comparison-min-width, 70px),
@@ -154,6 +170,33 @@
         border-right: 1px solid transparent;
         scroll-margin-inline: 12px;
     }
+
+    #splitter[data-layout="horizontal"][data-has-segment-icons="true"] #splitContainer table tr {
+        flex-basis: max(
+            var(--splitter-segment-icon-min-width, 40px),
+            var(--splitter-segment-name-min-width, 110px),
+            var(--splitter-segment-delta-min-width, 70px),
+            var(--splitter-segment-comparison-min-width, 70px),
+            var(--splitter-segment-time-min-width, 70px)
+        );
+
+        width: max(
+            var(--splitter-segment-icon-min-width, 40px),
+            var(--splitter-segment-name-min-width, 110px),
+            var(--splitter-segment-delta-min-width, 70px),
+            var(--splitter-segment-comparison-min-width, 70px),
+            var(--splitter-segment-time-min-width, 70px)
+        );
+
+        min-width: max(
+            var(--splitter-segment-icon-min-width, 40px),
+            var(--splitter-segment-name-min-width, 110px),
+            var(--splitter-segment-delta-min-width, 70px),
+            var(--splitter-segment-comparison-min-width, 70px),
+            var(--splitter-segment-time-min-width, 70px)
+        );
+    }
+
     #splitter[data-layout="horizontal"] #splitContainer table td {
         display: flex;
         width: 100%;

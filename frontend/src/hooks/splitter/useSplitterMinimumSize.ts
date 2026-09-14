@@ -110,6 +110,14 @@ export function useSplitterMinimumSize(splitterRef: React.RefObject<HTMLDivEleme
             return;
         }
 
+        const updateSegmentIconState = () => {
+            const hasSegmentIcons = element.querySelector(".segmentIcon") !== null;
+
+            element.dataset.hasSegmentIcons = hasSegmentIcons ? "true" : "false";
+
+            return hasSegmentIcons;
+        };
+
         let frame = 0;
         let updateCount = 0;
         let previousMinimum: MinimumSize | null = null;
@@ -117,6 +125,8 @@ export function useSplitterMinimumSize(splitterRef: React.RefObject<HTMLDivEleme
 
         const update = (reason = "unknown") => {
             lastUpdateReason = reason;
+
+            updateSegmentIconState();
 
             cancelAnimationFrame(frame);
 
@@ -299,6 +309,8 @@ export function useSplitterMinimumSize(splitterRef: React.RefObject<HTMLDivEleme
 
             mutationObserver.disconnect();
             resizeObserver.disconnect();
+
+            delete element.dataset.hasSegmentIcons;
 
             log.debug("[SplitterMinimumSize] Cleanup", {
                 layout: element.dataset.layout ?? "unknown",

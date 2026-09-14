@@ -69,7 +69,7 @@ export default function Splitter({
         }
     }, [controlledLayout, menuLayout, onLayoutChange]);
 
-    const { completeClassName, rows, finalRow, containerRef } = useSegmentList({
+    const { completeClassName, rows, finalRow, containerRef, hasSegmentIcons } = useSegmentList({
         sessionPayload,
         comparison,
         forceExpandAll,
@@ -89,6 +89,7 @@ export default function Splitter({
                 containerRef={containerRef}
                 rows={rows}
                 finalRow={finalRow}
+                hasSegmentIcons={hasSegmentIcons}
             />
         </div>
     );

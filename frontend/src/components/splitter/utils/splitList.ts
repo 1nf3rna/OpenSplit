@@ -71,11 +71,17 @@ function getComponentMinimumSize(element: HTMLElement, definition: SegmentCompon
  *     row height = sum(component heights)
  */
 function getSegmentRowMinimumSize(row: HTMLElement, layout: string | undefined): MinimumSize {
-    const components = SEGMENT_COMPONENTS.map((definition) => {
-        const component = row.querySelector<HTMLElement>(definition.selector);
+    const hasSegmentIcon = row.querySelector(".segmentIcon") !== null;
 
-        return component ? getComponentMinimumSize(component, definition) : null;
-    }).filter((size): size is MinimumSize => size !== null);
+    const components = SEGMENT_COMPONENTS.filter(
+        (definition) => definition.selector !== ".segmentIcon" || hasSegmentIcon,
+    )
+        .map((definition) => {
+            const component = row.querySelector<HTMLElement>(definition.selector);
+
+            return component ? getComponentMinimumSize(component, definition) : null;
+        })
+        .filter((size): size is MinimumSize => size !== null);
 
     if (components.length === 0) {
         return {

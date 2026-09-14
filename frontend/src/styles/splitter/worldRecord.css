@@ -7,19 +7,6 @@
         align-items: center;
     }
 
-    #world-record > div {
-        display: flex;
-        flex-direction: row;
-
-        flex: 0 0 auto;
-
-        justify-content: center;
-        align-items: center;
-        gap: 0.35rem;
-
-        white-space: nowrap;
-    }
-
     #world-record small {
         font-size: 0.85em;
     }
@@ -31,9 +18,6 @@
     }
 
     #splitter[data-layout="vertical"] #world-record {
-        flex-direction: column;
-        align-items: center;
-
         width: 100%;
 
         font-size: 0.8em;
@@ -43,29 +27,31 @@
     #splitter[data-layout="vertical"] #world-record-player,
     #splitter[data-layout="vertical"] #world-record-real-time,
     #splitter[data-layout="vertical"] #world-record-in-game-time {
-        display: flex;
-        flex-direction: row;
-        align-items: center;
+        padding: 2px;
     }
 
     #splitter[data-layout="vertical"] #world-record-label {
         min-width: var(--splitter-world-record-label-min-width, 0px);
         min-height: var(--splitter-world-record-label-min-height, 0px);
+        padding-right: 2px;
     }
 
     #splitter[data-layout="vertical"] #world-record-players {
         min-width: var(--splitter-world-record-players-min-width, 0px);
         min-height: var(--splitter-world-record-players-min-height, 0px);
+        padding-left: 2px;
     }
 
     #splitter[data-layout="vertical"] #world-record-rt-label {
         min-width: var(--splitter-world-record-rt-label-min-width, 0px);
         min-height: var(--splitter-world-record-rt-label-min-height, 0px);
+        padding-right: 2px;
     }
 
     #splitter[data-layout="vertical"] #world-record-rt-time {
         min-width: var(--splitter-world-record-rt-time-min-width, 0px);
         min-height: var(--splitter-world-record-rt-time-min-height, 0px);
+        padding-left: 2px;
     }
 
     #splitter[data-layout="vertical"] #world-record-rt-centiseconds {
@@ -76,11 +62,13 @@
     #splitter[data-layout="vertical"] #world-record-igt-label {
         min-width: var(--splitter-world-record-igt-label-min-width, 0px);
         min-height: var(--splitter-world-record-igt-label-min-height, 0px);
+        padding-right: 2px;
     }
 
     #splitter[data-layout="vertical"] #world-record-igt-time {
         min-width: var(--splitter-world-record-igt-time-min-width, 0px);
         min-height: var(--splitter-world-record-igt-time-min-height, 0px);
+        padding-left: 2px;
     }
 
     #splitter[data-layout="vertical"] #world-record-igt-centiseconds {
