@@ -2,6 +2,9 @@
     #world-record {
         display: flex;
         flex-direction: column;
+
+        justify-content: center;
+        align-items: center;
     }
 
     #world-record > div {
@@ -19,6 +22,12 @@
 
     #world-record small {
         font-size: 0.85em;
+    }
+
+    #world-record-players {
+        white-space: normal;
+        overflow-wrap: normal;
+        word-break: normal;
     }
 
     #splitter[data-layout="vertical"] #world-record {
