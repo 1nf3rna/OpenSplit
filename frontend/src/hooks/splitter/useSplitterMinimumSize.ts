@@ -220,14 +220,30 @@ export function useSplitterMinimumSize(splitterRef: React.RefObject<HTMLDivEleme
                 .querySelectorAll<HTMLElement>(
                     [
                         "#gameInfo",
+                        "#gameTitle",
+                        "#gameCategory",
+                        ".game-variable",
                         "#splitList",
                         "#splitContainer",
                         "#finalSegment",
                         "#finalSegment table",
                         "#finalSegment tbody",
                         "#finalSegment tr",
-                        "#splitterInfo",
                         ".splitName",
+                        // ".splitDelta",
+                        // ".splitComparison",
+                        // ".splitTime",
+                        "#splitterInfo",
+                        ".comparison-mode",
+                        "#world-record",
+                        // "#world-record-label",
+                        "#world-record-players",
+                        // "#world-record-rt-label",
+                        // "#world-record-rt-time",
+                        // "#world-record-rt-centiseconds",
+                        // "#world-record-igt-label",
+                        // "#world-record-igt-time",
+                        // "#world-record-igt-centiseconds",
                     ].join(", "),
                 )
                 .forEach(observe);
@@ -239,6 +255,10 @@ export function useSplitterMinimumSize(splitterRef: React.RefObject<HTMLDivEleme
             const reasons = mutations.map((mutation) => {
                 if (mutation.type === "childList") {
                     return "childList";
+                }
+
+                if (mutation.type === "characterData") {
+                    return "characterData changed";
                 }
 
                 if (mutation.type === "attributes") {
@@ -262,6 +282,7 @@ export function useSplitterMinimumSize(splitterRef: React.RefObject<HTMLDivEleme
             childList: true,
             subtree: true,
             attributes: true,
+            characterData: true,
             attributeFilter: ["class", "style", "data-layout"],
         });
 
