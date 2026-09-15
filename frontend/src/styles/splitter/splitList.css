@@ -82,8 +82,6 @@
     }
 
     #splitter[data-layout="vertical"] #finalSegment table tr {
-        width: 100%;
-        min-width: 0;
         height: auto;
     }
 
@@ -103,25 +101,15 @@
          * final segment's minimum width.
          */
         width: 0;
-        min-width: max(
-            var(--splitter-segment-name-min-width, 10px),
-            var(--splitter-segment-delta-min-width, 10px),
-            var(--splitter-segment-comparison-min-width, 10px),
-            var(--splitter-segment-time-min-width, 10px)
-        );
+        min-width: var(--splitter-segment-row-min-width);
+
         min-height: 0;
         box-sizing: border-box;
         overflow: hidden;
     }
 
     #splitter[data-layout="horizontal"][data-has-segment-icons="true"] #splitList {
-        min-width: max(
-            var(--splitter-segment-icon-min-width, 10px),
-            var(--splitter-segment-name-min-width, 10px),
-            var(--splitter-segment-delta-min-width, 10px),
-            var(--splitter-segment-comparison-min-width, 10px),
-            var(--splitter-segment-time-min-width, 10px)
-        );
+        min-width: max(var(--splitter-segment-row-min-width), var(--splitter-segment-icon-min-width, 10px));
     }
 
     #splitter[data-layout="horizontal"] #splitContainer {
@@ -194,29 +182,13 @@
          * The final segment occupies exactly its configured
          * minimum width. The split container gets everything else.
          */
-        flex: 0 0
-            max(
-                var(--splitter-segment-name-min-width, 10px),
-                var(--splitter-segment-delta-min-width, 10px),
-                var(--splitter-segment-comparison-min-width, 10px),
-                var(--splitter-segment-time-min-width, 10px)
-            );
+        flex: 0 0 var(--splitter-segment-row-min-width);
 
         flex-direction: column;
 
-        width: max(
-            var(--splitter-segment-name-min-width, 10px),
-            var(--splitter-segment-delta-min-width, 10px),
-            var(--splitter-segment-comparison-min-width, 10px),
-            var(--splitter-segment-time-min-width, 10px)
-        );
+        width: var(--splitter-segment-row-min-width);
 
-        min-width: max(
-            var(--splitter-segment-name-min-width, 10px),
-            var(--splitter-segment-delta-min-width, 10px),
-            var(--splitter-segment-comparison-min-width, 10px),
-            var(--splitter-segment-time-min-width, 10px)
-        );
+        min-width: var(--splitter-segment-row-min-width);
 
         max-width: 100%;
 
@@ -228,29 +200,11 @@
     }
 
     #splitter[data-layout="horizontal"][data-has-segment-icons="true"] #finalSegment {
-        flex-basis: max(
-            var(--splitter-segment-icon-min-width, 10px),
-            var(--splitter-segment-name-min-width, 10px),
-            var(--splitter-segment-delta-min-width, 10px),
-            var(--splitter-segment-comparison-min-width, 10px),
-            var(--splitter-segment-time-min-width, 10px)
-        );
+        flex-basis: max(var(--splitter-segment-row-min-width), var(--splitter-segment-icon-min-width, 10px));
 
-        width: max(
-            var(--splitter-segment-icon-min-width, 10px),
-            var(--splitter-segment-name-min-width, 10px),
-            var(--splitter-segment-delta-min-width, 10px),
-            var(--splitter-segment-comparison-min-width, 10px),
-            var(--splitter-segment-time-min-width, 10px)
-        );
+        width: max(var(--splitter-segment-row-min-width), var(--splitter-segment-icon-min-width, 10px));
 
-        min-width: max(
-            var(--splitter-segment-icon-min-width, 10px),
-            var(--splitter-segment-name-min-width, 10px),
-            var(--splitter-segment-delta-min-width, 10px),
-            var(--splitter-segment-comparison-min-width, 10px),
-            var(--splitter-segment-time-min-width, 10px)
-        );
+        min-width: max(var(--splitter-segment-row-min-width), var(--splitter-segment-icon-min-width, 10px));
     }
 
     #splitter[data-layout="horizontal"] #finalSegment table {

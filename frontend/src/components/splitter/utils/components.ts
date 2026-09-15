@@ -155,9 +155,9 @@ const WORLD_RECORD_PLAYER_COMPONENTS: ComponentDefinition[] = [
         heightVariable: "--splitter-world-record-label-min-height",
     },
     {
-        selector: "#world-record-players",
-        widthVariable: "--splitter-world-record-players-min-width",
-        heightVariable: "--splitter-world-record-players-min-height",
+        selector: "#world-record-names",
+        widthVariable: "--splitter-world-record-names-min-width",
+        heightVariable: "--splitter-world-record-names-min-height",
         contentAware: {
             // width: true,
             height: true,
@@ -208,7 +208,7 @@ function calculateWorldRecordSection(worldRecord: HTMLElement, definitions: Comp
 export function calculateWorldRecordMinimumSize(element: HTMLElement): MinimumSize {
     const sections = [
         {
-            selector: "#world-record-player",
+            selector: "#world-record-players",
             definitions: WORLD_RECORD_PLAYER_COMPONENTS,
         },
         {

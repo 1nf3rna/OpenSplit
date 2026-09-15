@@ -72,29 +72,11 @@
      */
 
     #splitter[data-layout="horizontal"] #gameInfo {
-        flex: 0 1
-            calc(
-                max(
-                        var(--splitter-game-title-min-width, 50px),
-                        var(--splitter-game-category-min-width, 50px),
-                        var(--splitter-game-variable-min-width, 50px),
-                        var(--splitter-attempts-min-width, 40px)
-                    ) +
-                    var(--splitter-game-info-padding-width, 32px)
-            );
+        flex: 0 1 calc(var(--splitter-gameinfo-min-width) + var(--splitter-game-info-padding-width, 32px));
         width: auto;
-        min-width: calc(
-            max(
-                    var(--splitter-game-title-min-width, 50px),
-                    var(--splitter-game-category-min-width, 50px),
-                    var(--splitter-game-variable-min-width, 50px),
-                    var(--splitter-attempts-min-width, 40px)
-                ) +
-                var(--splitter-game-info-padding-width, 32px)
-        );
+        min-width: calc(var(--splitter-gameinfo-min-width) + var(--splitter-game-info-padding-width, 32px));
         max-width: none;
         min-height: 0;
         overflow: hidden;
     }
-    /*#splitter[data-layout="horizontal"] #gameInfo {*/ /*flex: 0 0 max-content;*/ /*flex: 0 1 auto; width: auto; min-width: max( var(--splitter-game-title-min-width, 50px), var(--splitter-game-category-min-width, 50px), var(--splitter-game-variable-min-width, 50px), var(--splitter-attempts-min-width, 40px) ); max-width: none; overflow: hidden; }*/
 }

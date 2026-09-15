@@ -247,7 +247,7 @@ export function useSplitterMinimumSize(splitterRef: React.RefObject<HTMLDivEleme
                         ".comparison-mode",
                         "#world-record",
                         // "#world-record-label",
-                        "#world-record-players",
+                        "#world-record-names",
                         // "#world-record-rt-label",
                         // "#world-record-rt-time",
                         // "#world-record-rt-centiseconds",
